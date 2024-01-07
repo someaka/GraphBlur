@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feeds</title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+    <link rel="stylesheet" href="feeds_styles.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+</head>
+
+<body>
+    <div id="container">
+        <div id="loading" class="spinner"></div>
+        <div id="feedsContainer" class="panel">
+            <button id="selectAllButton" class="btn btn-primary">Select All</button>
+            <div id="feedslist"></div>
+        </div>
+        <div id="graphcontent" class="panel">
+        </div>
+        <div id="maincontent" class="panel_overlay">
+            <div style="text-align: right;">
+                <button id="toggleButton" class="btn btn-primary">Toggle Articles</button>
+            </div>
+            <div id="articles"></div>
+            <div id="mainContentSpinner" class="spinner center-in-maincontent"></div> <!-- New spinner -->
+        </div>
+        <template id="articleTemplate">
+            <div class="article">
+                <h2 class="title"></h2>
+                <p class="text"></p>
+            </div>
+        </template>
+        <script src="https://d3js.org/d3.v6.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+        <script type="module" src="/src/feeds.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</body>
+
+</html>

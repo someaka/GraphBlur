@@ -163,53 +163,81 @@ async function fetchStories(feedId, options = {}) {
 
 
 
-// Helper function to fetch a single article
-async function fetchArticle(url) {
+// Helper function to fetch a single article// Helper function to fetch a single article with retries
+async function fetchArticle(url, retries = 3) {
   if (typeof url !== 'string') {
       console.error(`Invalid URL: ${url}`);
       return { article: null, status: 'failure', error: 'Invalid URL' };
   }
-  try {
-      const response = await axios.get(url);
-      //console.log(`Fetched HTML for URL: ${url}`, response.data); // Log the HTML content
-      // Pass the HTML data and the URL to processArticle
-      return { article: await processArticle(response.data, url), status: 'success' };
-  } catch (error) {
-      console.error(`An error occurred while fetching the article from ${url}:`, error);
-      return { article: null, status: 'failure', error: error.message };
+  let attempt = 0;
+  while (attempt < retries) {
+      try {
+          const response = await axios.get(url, {
+              headers: {
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+              }
+          });
+          return { article: await processArticle(response.data, url), status: 'success' };
+      } catch (error) {
+          if (attempt === retries - 1) {
+              console.error(`An error occurred while fetching the article from ${url}:`, error);
+              return { article: null, status: 'failure', error: error.message };
+          }
+          attempt++;
+          console.log(`Retrying fetch for ${url}, attempt ${attempt}`);
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000)); // Exponential backoff
+      }
   }
 }
-
 
 
 async function processArticle(htmlData, url) {
   try {
-    // Log the URL being processed for reference
-    console.log(`Processing article from URL: ${url}`);
+      // Log the URL being processed for reference
+      console.log(`Processing article from URL: ${url}`);
 
-    // Use the extract function from @extractus/article-extractor
-    const article = await extract(htmlData, {
-      // You can pass additional options if needed
-    });
+      // Use the extract function from @extractus/article-extractor
+      const article = await extract(htmlData, {
+          // You can pass additional options if needed
+      });
 
-    if (article) {
-      // Log the extracted article title for reference
-      console.log(`Extracted article title: ${article.title}`);
-      return {
-        title: article.title,
-        text: article.content, // Use 'content' which contains the main article text
-        url: article.url
-      };
-    } else {
-      console.error('Failed to extract article content. No article data returned.');
-      return null;
-    }
+      if (article) {
+          // Clean the content
+          const cleanedContent = cleanArticleContent(article.content);
+
+          // Log the extracted article title for reference
+          console.log(`Extracted article title: ${article.title}`);
+          return {
+              title: article.title,
+              text: cleanedContent, // Use the cleaned content
+              url: article.url
+          };
+      } else {
+          console.error('Failed to extract article content. No article data returned.');
+          return null;
+      }
   } catch (error) {
-    console.error('An error occurred while extracting the article:', error);
-    return null;
+      console.error('An error occurred while extracting the article:', error);
+      return null;
   }
 }
 
+import sanitizeHtml from 'sanitize-html';
+
+function cleanArticleContent(content) {
+    // Define the allowed tags and attributes
+    const clean = sanitizeHtml(content, {
+        allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2']),
+        allowedAttributes: {
+            ...sanitizeHtml.defaults.allowedAttributes,
+            'img': ['src', 'alt']
+        },
+        // Do not allow any CSS styles
+        allowedStyles: {}
+    });
+
+    return clean; // Return the cleaned content
+}
 
 
 

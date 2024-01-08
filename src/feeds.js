@@ -24,7 +24,9 @@ feedsListElement.onclick = async () => {
     isSameFeedClickedBool = false;
 };
 
-
+toggleButton.onclick = async () => {
+    retractMainContent();
+};
 
 
 
@@ -259,15 +261,6 @@ function unselectCurrentFeed() {
     }
 }
 
-// Utility function to sanitize and format text
-function formatArticleText(text) {
-    // Remove HTML tags and unwanted characters
-    const sanitizedText = text.replace(/<\/?[^>]+(>|$)/g, "").replace(/&nbsp;/g, ' ').trim();
-    // Perform any additional formatting you need
-    // ...
-    return sanitizedText;
-}
-
 
 
 // Utility function to sanitize and format text
@@ -322,8 +315,7 @@ async function displayArticles(feedData) {
         articlesElement.appendChild(articleContainer);
     });
 
-    // After articles are displayed, update the graph
-    updateGraph(articlesCache); // Assuming updateGraph takes the articlesCache as an argument
+    updateGraphForSelectedFeeds(articlesCache); // Pass articlesCache as an argument
 }
 
 

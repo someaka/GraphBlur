@@ -10,6 +10,7 @@
     "dev": "npm-run-all --parallel start:vite start:server"
   },
   "dependencies": {
+    "@extractus/article-extractor": "^8.0.4",
     "axios": "^1.6.5",
     "axios-cookiejar-support": "^4.0.7",
     "cheerio": "^1.0.0-rc.12",

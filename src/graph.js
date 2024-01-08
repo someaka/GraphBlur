@@ -12,96 +12,103 @@ export async function calculateSimilarity(articles) {
     console.log('Updated similarity matrix:', similarityMatrix);
 }
 
-export function visualizeGraph(graph) {
-    const width = 800; // Width of the graph
-    const height = 600; // Height of the graph
+export function visualizeGraph(graphData) {
+    const width = 800; // Set the width of the graph
+    const height = 600; // Set the height of the graph
 
-    // Remove any existing SVG to start fresh when visualizing a new graph
-    d3.select('#graphcontent').select('svg').remove();
+    // Select the SVG element, creating it if it doesn't exist
+    let svg = d3.select('#graphcontent').select('svg');
+    if (svg.empty()) {
+        console.log("Creating new SVG");
+        svg = d3.select('#graphcontent').append('svg')
+            .attr('width', width)
+            .attr('height', height);
+    } else {
+        console.log("SVG already exists");
+    }
 
-    // Create the SVG element
-    const svg = d3.select('#graphcontent').append('svg')
-        .attr('width', width)
-        .attr('height', height);
+    // Bind the new data to the nodes
+    const nodes = svg.selectAll('circle')
+        .data(graphData.nodes, d => d.id);
 
-    // Create the simulation with forces
-    const simulation = d3.forceSimulation(graph.nodes)
-        .force('link', d3.forceLink(graph.links).id(d => d.id).distance(50))
-        .force('charge', d3.forceManyBody().strength(-50))
-        .force('center', d3.forceCenter(width / 2, height / 2));
+    console.log("Nodes data:", graphData.nodes);
 
-    // Create the links (lines)
-    const link = svg.append('g')
-        .attr('class', 'links')
-        .selectAll('line')
-        .data(graph.links)
-        .enter().append('line')
-        .attr('stroke-width', d => Math.sqrt(d.value));
-
-    // Create the nodes (circles)
-    const node = svg.append('g')
-        .attr('class', 'nodes')
-        .selectAll('circle')
-        .data(graph.nodes)
-        .enter().append('circle')
+    // Enter new nodes
+    const enteredNodes = nodes.enter().append('circle')
         .attr('r', 5)
-        .attr('fill', d => {
-            // Log the color being used for each node
-            console.log(`Node ${d.id} color:`, d.color);
-            return d.color;
-        })
-        .call(d3.drag()
+        .attr('fill', d => d.color);
+
+    console.log("Entered nodes:", enteredNodes.nodes());
+
+    enteredNodes.merge(nodes) // Merge enter and update selections
+        .call(d3.drag() // Re-apply drag behavior to new and updated nodes
             .on('start', dragStarted)
             .on('drag', dragged)
             .on('end', dragEnded));
 
-    // Add titles to nodes (hover tooltip)
-    node.append('title')
-        .text(d => d.title);
+    // Remove old nodes
+    nodes.exit().remove();
 
-    // Define the tick function for the simulation
-    simulation.on('tick', () => {
-        link
-            .attr('x1', d => d.source.x)
-            .attr('y1', d => d.source.y)
-            .attr('x2', d => d.target.x)
-            .attr('y2', d => d.target.y);
+    // Define and start the simulation if it's not already running
+    if (!window.simulation) {
+        console.log("Creating new simulation");
+        window.simulation = d3.forceSimulation(graphData.nodes)
+            .force('link', d3.forceLink(graphData.links).id(d => d.id))
+            .force('charge', d3.forceManyBody())
+            .force('center', d3.forceCenter(width / 2, height / 2))
+            .on('tick', ticked);
+    } else {
+        console.log("Updating simulation");
+        window.simulation.nodes(graphData.nodes);
+        window.simulation.force('link').links(graphData.links);
+        window.simulation.alpha(0.3).restart();
+    }
 
-        node
+    function ticked() {
+        // Update node positions
+        svg.selectAll('circle')
             .attr('cx', d => d.x)
             .attr('cy', d => d.y);
-    });
-
-    // Drag functions
-    function dragStarted(event) {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        event.subject.fx = event.subject.x;
-        event.subject.fy = event.subject.y;
-    }
-
-    function dragged(event) {
-        event.subject.fx = event.x;
-        event.subject.fy = event.y;
-    }
-
-    function dragEnded(event) {
-        if (!event.active) simulation.alphaTarget(0);
-        event.subject.fx = null;
-        event.subject.fy = null;
     }
 }
 
+
+function dragStarted(event, d) {
+    if (!event.active) window.simulation.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+}
+
+function dragged(event, d) {
+    d.fx = event.x;
+    d.fy = event.y;
+}
+
+function dragEnded(event, d) {
+    if (!event.active) window.simulation.alphaTarget(0);
+    d.fx = null;
+    d.fy = null;
+}
+
 export function constructGraphData(articles) {
-    console.log('Articles before mapping:', articles); // Log the articles before mapping
-
     // Create nodes for each article
-    const nodes = articles.map((article, index) => ({
-        id: article.id, // Make sure each article has a unique ID
+    const nodes = articles.map(article => ({
+        id: article.id,
         title: article.title,
-        color: article.feedColor // Use the color associated with the feed
+        color: article.feedColor
     }));
-    const links = [];
 
+    // Create links with equal weights between all pairs of nodes
+    const links = [];
+    for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+            links.push({
+                source: nodes[i],
+                target: nodes[j],
+                weight: 1 // Equal weight for all edges
+            });
+        }
+    }
     // articles.forEach((article, i) => {
     //     // Loop over all articles
     //     articles.forEach((otherArticle, j) => {
@@ -129,7 +136,14 @@ export function constructGraphData(articles) {
 }
 
 export function clearGraph() {
-    d3.select('#graphcontent').select('svg').remove(); // Remove the SVG element containing the graph
+    // Stop the simulation if it's running
+    if (window.simulation) {
+        window.simulation.stop();
+        window.simulation = null; // Clear the reference to the simulation
+    }
+
+    // Clear the contents of the SVG element without removing it
+    d3.select('#graphcontent').select('svg').selectAll('*').remove();
 }
 
 export async function updateGraphForSelectedFeeds(articlesCache) {

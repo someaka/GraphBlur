@@ -5,17 +5,19 @@ import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
 import cheerio from 'cheerio';
-import tough from 'tough-cookie';
-//import faiss from 'faiss';
-import puppeteer from 'puppeteer';
 import { calculateSimilarity, getEmbeddings } from './simil.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import faiss from 'faiss-node';
+import { extract } from '@extractus/article-extractor';
 
 const APIFY_TOKEN = process.env.APIFY_TOKEN;
-//const cookieJar = new tough.CookieJar();
 const NEWSBLUR_URL = 'https://www.newsblur.com';
 const PORT = process.env.PORT || 3001;
+
+let browser;
+let articleCache = {};
+let feedArticleCounts = {};
 
 // Wrap axios with axios-cookiejar-support
 wrapper(axios);
@@ -23,44 +25,28 @@ wrapper(axios);
 // Create a new cookie jar
 const cookieJar = new CookieJar();
 
-// const browser = await puppeteer.launch({
-//   headless: 'new',
-// });
-
 // Get the directory name of the current module
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Now you can use __dirname as you would in a CommonJS module
-
-//server.use(express.static('public'));
 const server = express();
 server.use(express.json());
-
-import faiss from 'faiss-node'; // Or equivalent server-side Faiss package
 
 // Initialize FAISS index
 const dimension = 384; // Dimension for all-MiniLM-L6-v2 embeddings
 const index = new faiss.IndexFlatL2(dimension);
 
-// Endpoint to add articles and their embeddings to the Faiss index
-server.post('/add-articles', async (req, res) => {
-  const { articles } = req.body;
-  try {
-    const texts = articles.map(article => article.text);
-    const embeddings = await getEmbeddings(texts);
 
-    for (const embedding of embeddings) {
-      // Add embedding to the index
-      index.add(1, new Float32Array(embedding));
-    }
-    res.status(200).json({ message: 'Embeddings added to index successfully' });
-  } catch (error) {
-    console.error('Failed to add embeddings to index:', error);
-    res.status(500).json({ error: 'Failed to add embeddings to index' });
-  }
-});
 
-// Function to get embeddings from an external service or model
+
+
+
+
+
+
+
+
+
+
 
 
 async function getValidSessionCookie(cookies) {
@@ -121,9 +107,7 @@ async function login(username, password) {
 }
 
 
-
-
-
+// Fetch feeds without including story content
 async function fetchFeeds() {
   const response = await axios({
     method: 'get',
@@ -132,6 +116,9 @@ async function fetchFeeds() {
       'Content-Type': 'application/json',
       'Cookie': cookieJar.getCookieStringSync(NEWSBLUR_URL)
     },
+    params: {
+      include_story_content: false // Exclude story content
+    },
     jar: cookieJar,
     withCredentials: true
   });
@@ -139,77 +126,103 @@ async function fetchFeeds() {
   return response.data.feeds;
 }
 
-async function fetchStories(feedId) {
-  const response = await axios({
-    method: 'get',
-    url: `${NEWSBLUR_URL}/reader/feed/${feedId}`,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cookie': cookieJar.getCookieStringSync(NEWSBLUR_URL)
-    },
-    jar: cookieJar,
-    withCredentials: true
-  });
+// Fetch stories for a specific feed without including story content
+async function fetchStories(feedId, options = {}) {
+  const params = new URLSearchParams({
+    page: options.page || 1,
+    order: options.order || 'newest',
+    read_filter: 'unread',
+    include_hidden: options.include_hidden || false,
+    include_story_content: false // Exclude story content
+  }).toString();
 
-  return response.data.stories.filter(story => !story.read);
-}
+  let allUnreadStories = [];
+  let page = 1;
+  let hasMore = true;
 
-// async function fetchArticle(url) {
-//   const response = await axios.get(url);
-//   const $ = cheerio.load(response.data);
-//   const title = $('title').text();
-//   const text = $('p').text();
-
-//   return { url, title, text };
-// }
-
-let browser;
-let articleCache = {};
-
-async function getBrowserInstance() {
-  if (browser) return browser;
-  browser = await puppeteer.launch({
-    headless: 'new',
-    //args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
-  return browser;
-}
-
-async function fetchArticle(url) {
-  // Check if the result is already in the cache
-  if (articleCache[url]) {
-    return articleCache[url];
-  }
-
-  let page;
-
-  try {
-    const browser = await getBrowserInstance();
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)');
-    await page.goto(url, { waitUntil: 'networkidle0' }); // Wait until the page is fully loaded
-
-    // Execute code in the context of the page to retrieve the title and text
-    const article = await page.evaluate(() => {
-      const title = document.querySelector('title') ? document.querySelector('title').innerText : '';
-      const paragraphs = Array.from(document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div'));
-      const text = paragraphs.map(element => element.innerText).join('\n');
-      return { title, text };
+  while (hasMore) {
+    const response = await axios({
+      method: 'get',
+      url: `${NEWSBLUR_URL}/reader/feed/${feedId}?${params}&page=${page}`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': cookieJar.getCookieStringSync(NEWSBLUR_URL)
+      },
+      jar: cookieJar,
+      withCredentials: true
     });
 
-    return { url, title: article.title, text: article.text };
+    const stories = response.data.stories || [];
+    allUnreadStories = allUnreadStories.concat(stories);
+    hasMore = stories.length > 0;
+    page++;
+  }
+
+  return allUnreadStories;
+}
+
+
+
+// Helper function to fetch a single article
+async function fetchArticle(url) {
+  if (typeof url !== 'string') {
+      console.error(`Invalid URL: ${url}`);
+      return { article: null, status: 'failure', error: 'Invalid URL' };
+  }
+  try {
+      const response = await axios.get(url);
+      //console.log(`Fetched HTML for URL: ${url}`, response.data); // Log the HTML content
+      // Pass the HTML data and the URL to processArticle
+      return { article: await processArticle(response.data, url), status: 'success' };
   } catch (error) {
-    console.error(`An error occurred while fetching the article from ${url}:`, error);
-    return { url, title: 'Error', text: 'Failed to fetch article' };
-  } finally {
-    if (page) await page.close(); // Close the page to free up resources
+      console.error(`An error occurred while fetching the article from ${url}:`, error);
+      return { article: null, status: 'failure', error: error.message };
   }
 }
 
-// Make sure to close the browser when your application is closing or when you no longer need it
-process.on('exit', async () => {
-  if (browser) await browser.close();
-});
+
+
+async function processArticle(htmlData, url) {
+  try {
+    // Log the URL being processed for reference
+    console.log(`Processing article from URL: ${url}`);
+
+    // Use the extract function from @extractus/article-extractor
+    const article = await extract(htmlData, {
+      // You can pass additional options if needed
+    });
+
+    if (article) {
+      // Log the extracted article title for reference
+      console.log(`Extracted article title: ${article.title}`);
+      return {
+        title: article.title,
+        text: article.content, // Use 'content' which contains the main article text
+        url: article.url
+      };
+    } else {
+      console.error('Failed to extract article content. No article data returned.');
+      return null;
+    }
+  } catch (error) {
+    console.error('An error occurred while extracting the article:', error);
+    return null;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 server.post('/login', async (req, res) => {
   const { username, password = '' } = req.body;
@@ -246,9 +259,13 @@ server.get('/feeds', async (req, res) => {
         ...feeds[feedId],
         unreadStories: unreadStories.map(story => story.story_permalink)
       };
+      // Cache the unread stories for each feed
+      articleCache[feedId] = unreadStories;
+      // console.log("Unread stories for feed", feedId, ":", unreadStories.length);
     });
 
     await Promise.all(promises);
+    //console.log('Feeds with unread stories:', feedsWithUnreadStories); // Log the final feeds data
 
     res.status(200).send(feedsWithUnreadStories);
   } catch (error) {
@@ -257,29 +274,34 @@ server.get('/feeds', async (req, res) => {
   }
 });
 
+
 server.post('/fetch-articles', async (req, res) => {
-  const { urls } = req.body;
+  const { feedId } = req.body;
+  try {
+    // Use the cached unread stories if available
+    const unreadStories = articleCache[feedId] || [];
+    //console.log(`Unread stories for feedId ${feedId}:`, unreadStories);
 
-  const promises = urls.map(async (url) => {
-    try {
-      const article = await fetchArticle(url);
-      return article;
-    } catch (error) {
-      console.error(`Failed to crawl "${url}":`, error);
-      return { url, title: 'Error', text: 'Failed to fetch article' };
-    }
-  });
+    // Validate that unreadStories contains valid URLs
+    const validUrls = unreadStories.filter(story => typeof story.story_permalink === 'string' && story.story_permalink.startsWith('http'));
+    console.log(`Valid URLs for feedId ${feedId}:`, validUrls.map(story => story.story_permalink));
 
-  const results = await Promise.all(promises);
+    const articles = await Promise.all(validUrls.map(story => fetchArticle(story.story_permalink)));
+    //console.log(`Articles fetched for feedId ${feedId}:`, articles); // Log the fetched articles
 
-  res.status(200).send(results);
+    res.status(200).send({ articles });
+  } catch (error) {
+    // console.error('Failed to fetch articles:', error);
+    res.status(500).send({ articles: [], warning: 'Internal server error' });
+  }
 });
 
-// server.post('/calculate-similarity', async (req, res) => {
-//   const articles = req.body;
-//   await addArticles(articles);
-//   res.json(similarityMatrix);
-// });
+
+// Make sure to close the browser when your application is closing or when you no longer need it
+process.on('exit', async () => {
+  if (browser) await browser.close();
+});
+
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

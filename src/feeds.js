@@ -9,6 +9,7 @@ const selectAllButton = document.querySelector('#selectAllButton');
 import * as d3 from 'd3';
 import { calculateSimilarity } from './simil.js';
 import { clearGraph, updateGraphForSelectedFeeds } from './graph.js';
+import { updateFeedElementStyles } from './domUtils';
 
 let isSameFeedClickedBool = false;
 let currentFeed = null;
@@ -35,7 +36,7 @@ async function fetchFeeds() {
         }
         const data = await response.text(); // Get the response as text first
 
-        console.log('Response received:', data); // Log the raw response
+        // console.log('Response received:', data); // Log the raw response
 
         try {
             const json = JSON.parse(data); // Try to parse it as JSON
@@ -50,34 +51,29 @@ async function fetchFeeds() {
     }
 }
 
-async function fetchCrawleeResults(urls) {
-    console.log(`Hello from fetchCrawleeResults`);
+
+async function fetchHtmlResults(urls, feedId) {
+    console.log(`Fetching articles for feedId: ${feedId}`);
 
     try {
-        const response = await axios.post('/api/fetch-articles', { urls });
-        return response.data;
+        const response = await axios.post('/api/fetch-articles', { urls, feedId });
+        // console.log('Response from fetch-articles:', response.data); // Log the server response
+        if (response.data.warning) {
+            console.warn('Warning from fetch-articles:', response.data.warning);
+        }
+        if (response.data && Array.isArray(response.data.articles)) {
+            return response.data.articles; // Return the articles array
+        } else {
+            console.error('fetchHtmlResults did not return an array:', response.data);
+            return []; // Return an empty array if the response is not as expected
+        }
     } catch (error) {
         console.error('Failed to fetch articles:', error);
-        return [];
+        return []; // Return an empty array in case of an error
     }
 }
 
-async function addArticles(articles) {
-    // Logic to add articles to your data structure
-    // For example, you might be adding articles to an in-memory array or a database
 
-    // After adding articles, you might want to calculate similarities or perform other operations
-    // Here's a placeholder for similarity calculation
-    articles.forEach(article => {
-        // Calculate similarity with other articles
-        // This is just a placeholder logic
-        const similarityScores = articles.map(otherArticle => calculateSimilarity(article.embedding, otherArticle.embedding));
-        // Do something with the similarity scores
-    });
-
-    // Return something if needed, for example, the updated list of articles with similarity scores
-    return articles;
-}
 
 async function createFeedElement(feedData, feedIndex, totalFeeds) {
     const feedElement = document.createElement('div');
@@ -123,28 +119,65 @@ async function createFeedElement(feedData, feedIndex, totalFeeds) {
 }
 
 
+// export async function fetchArticles(feedData) {
+//     if (articlesCache[feedData.id]) {
+//         return articlesCache[feedData.id];
+//     } else {
+//         mainContentSpinner.style.display = 'block'; // Show the spinner in the main content
+
+//         const unreadUrls = feedData.unreadStories.slice(0, feedData.nt);
+//         console.log('Unread URLs:', unreadUrls); // Log the URLs to be fetched
+
+//         const feedId = feedData.id;
+//         const response = await fetchHtmlResults(unreadUrls, feedId);
+//         const { articles } = response;
+
+//         if (articles && Array.isArray(articles)) {
+//             articlesCache[feedData.id] = articles; // Cache the fetched articles
+//         }
+
+//         mainContentSpinner.style.display = 'none'; // Hide the spinner
+
+//         return articles || []; // Return the articles or an empty array if undefined
+//     }
+// }
+
+async function updateArticlesWithColor(articles, feedColor) {
+    return articles.map(article => ({ ...article, feedColor }));
+}
+
 async function loadArticles(feedData) {
-    let crawleeResults;
-    console.log(`Fetched articles for feed ${feedData.id}:`, crawleeResults); // Log the fetched articles
+    const { id: feedId, nt: expectedArticlesCount, unreadStories, feedColor } = feedData;
 
-    if (articlesCache[feedData.id]) {
-        crawleeResults = articlesCache[feedData.id];
-    } else {
-        mainContentSpinner.style.display = 'block'; // Show the spinner in the main content
+    console.log(`Loading articles for feed ${feedId}`);
 
-        const unreadUrls = feedData.unreadStories.slice(0, feedData.nt);
-        crawleeResults = await fetchCrawleeResults(unreadUrls);
-        crawleeResults.forEach(article => {
-            article.feedColor = feedData.feedColor;
-        });
-        articlesCache[feedData.id] = crawleeResults;
-
-        // Update the graph immediately after fetching articles
-        updateGraphForSelectedFeeds(articlesCache);
-
-        mainContentSpinner.style.display = 'none'; // Hide the spinner in the main content
+    // Return cached articles if available
+    if (articlesCache[feedId]) {
+        return articlesCache[feedId];
     }
-    await displayResults(crawleeResults);
+
+    mainContentSpinner.style.display = 'block'; // Show the spinner in the main content
+
+    const articleUrls = unreadStories.map(story => story.url);
+    const fetchedArticles = await fetchHtmlResults(articleUrls, feedId);
+
+    // Hide the spinner in the main content
+    mainContentSpinner.style.display = 'none';
+
+    if (!Array.isArray(fetchedArticles)) {
+        console.error('No articles fetched for feed:', feedId);
+        return (articlesCache[feedId] = []); // Cache and return an empty array if no articles are fetched
+    }
+
+    if (fetchedArticles.length !== expectedArticlesCount) {
+        console.warn(`Expected ${expectedArticlesCount} articles for feed ${feedId}, but got ${fetchedArticles.length}`);
+    }
+
+    // Update articles with feed color and cache the result
+    const articlesWithColor = await updateArticlesWithColor(fetchedArticles, feedColor);
+    articlesCache[feedId] = articlesWithColor;
+
+    return articlesWithColor;
 }
 
 function toggleMainContent(show) {
@@ -173,7 +206,7 @@ function expandMainContent(feedData) {
 }
 
 async function handleFeedClick(feedElement, feedData) {
-    console.log('Feed clicked:', feedData);
+    // console.log('Feed clicked:', feedData);
 
     if (isCurrentDisplayedFeed(feedData)) {
         handleCurrentDisplayedFeedClick(feedElement);
@@ -226,10 +259,31 @@ function unselectCurrentFeed() {
     }
 }
 
+// Utility function to sanitize and format text
+function formatArticleText(text) {
+    // Remove HTML tags and unwanted characters
+    const sanitizedText = text.replace(/<\/?[^>]+(>|$)/g, "").replace(/&nbsp;/g, ' ').trim();
+    // Perform any additional formatting you need
+    // ...
+    return sanitizedText;
+}
+
+
+
+// Utility function to sanitize and format text
+function formatArticleText(text) {
+    // Remove HTML tags and unwanted characters
+    const sanitizedText = text.replace(/<\/?[^>]+(>|$)/g, "").replace(/&nbsp;/g, ' ').trim();
+    // Perform any additional formatting you need
+    // ...
+    return sanitizedText;
+}
+
+
+
 async function displayArticles(feedData) {
     // Clear previous articles and graph
     articlesElement.innerHTML = '';
-    //d3.select('#graphcontent').select('svg').remove();
 
     // Check if articles are cached
     if (!articlesCache[feedData.id]) {
@@ -238,13 +292,38 @@ async function displayArticles(feedData) {
 
     // Display articles in the articles element
     const articles = articlesCache[feedData.id];
-    console.log(`Displaying articles for feed ${feedData.id}:`, articles); // Log the articles before displaying
-    articles.forEach(article => {
-        const articleElement = document.createElement('div');
-        articleElement.textContent = `${article.title}: ${article.text}`;
-        articlesElement.appendChild(articleElement);
-        article.feedColor = feedData.feedColor; // Assign the feed color to the article
+
+    // Check if articles is an array before calling forEach
+    if (!Array.isArray(articles)) {
+        console.error(`Expected articles to be an array, but got:`, articles);
+        return; // Exit the function if articles is not an array
+    }
+
+    articles.forEach(articleData => {
+        const articleContainer = document.createElement('div');
+        articleContainer.classList.add('article-container');
+
+        if (articleData && articleData.article) {
+            const titleElement = document.createElement('h2');
+            titleElement.textContent = articleData.article.title;
+            articleContainer.appendChild(titleElement);
+
+            const textElement = document.createElement('p');
+            textElement.textContent = formatArticleText(articleData.article.text);
+            articleContainer.appendChild(textElement);
+
+            articleContainer.style.backgroundColor = articleData.feedColor; // Assign the feed color to the article
+        } else {
+            const failedMessage = document.createElement('p');
+            failedMessage.textContent = 'Failed to fetch article';
+            failedMessage.style.color = 'red'; // Assign a red color to indicate failure
+            articleContainer.appendChild(failedMessage);
+        }
+        articlesElement.appendChild(articleContainer);
     });
+
+    // After articles are displayed, update the graph
+    updateGraph(articlesCache); // Assuming updateGraph takes the articlesCache as an argument
 }
 
 
@@ -285,51 +364,62 @@ async function displayResults(results) {
 
         articlesElement.appendChild(articleFragment);
     } catch (error) {
-        console.error('An error occurred while displaying results:', error);
+        // console.error('An error occurred while displaying results:', error);
     } finally {
         loadingElement.style.display = 'none';
     }
 }
 
 
-function toggleAllFeeds() {
+async function toggleAllFeeds(feedsData) {
     const allFeeds = document.querySelectorAll('#feedslist div');
     const isSelecting = selectAllButton.textContent === 'Select All';
 
-    allFeeds.forEach((feed) => {
-        if (isSelecting) {
-            feed.classList.add('clicked');
-            feed.style.backgroundColor = feed.dataset.originalColor + '80'; // Use the stored original color
-            feed.style.boxShadow = 'inset 0 0 5px rgba(0,0,0,0.3)';
-        } else {
-            feed.classList.remove('clicked');
-            feed.style.backgroundColor = feed.dataset.originalColor; // Use the stored original color
-            feed.style.boxShadow = '';
-        }
-    });
+    allFeeds.forEach(feed => updateFeedElementStyles(feed, isSelecting));
 
     selectAllButton.textContent = isSelecting ? 'Unselect All' : 'Select All';
 
-    // Trigger graph update based on selection
     if (isSelecting) {
-        updateGraphForSelectedFeeds(articlesCache); // Draw all nodes
+        // Perform actions for selecting all feeds
+        await selectAllFeedsActions(allFeeds, feedsData);
     } else {
-        clearGraph(); // Clear the graph
-        retractMainContent(); // Retract the right panel
+        // Perform actions for unselecting all feeds
+        unselectAllFeedsActions();
     }
 }
 
+async function selectAllFeedsActions(allFeeds, feedsData) {
+    for (const feedElement of allFeeds) {
+        const feedId = feedElement.id;
+        const feedData = feedsData[feedId];
+        if (!feedData || !Array.isArray(feedData.unreadStories)) {
+            console.error(`Feed data for ID ${feedId} is missing unreadStories or is not an array.`);
+            continue;
+        }
+        await displayArticles(feedData);
+    }
+    updateGraphForSelectedFeeds(articlesCache);
+}
+
+function unselectAllFeedsActions() {
+    clearGraph();
+    retractMainContent();
+    articlesCache = {};
+}
+
+
 window.onload = async () => {
     loadingElement.style.display = 'block';
-
-    // Explicitly set the initial right property for mainContentElement
     mainContentElement.style.right = '-30%';
 
+    let localFeedsData; // Declare a local variable to store feeds data
+
     try {
-        const feedsData = await fetchFeeds();
-        if (feedsData) {
-            await appendFeedsToDOM(feedsData);
+        localFeedsData = await fetchFeeds();
+        if (localFeedsData) {
+            await appendFeedsToDOM(localFeedsData);
             selectAllButton.style.display = 'block'; // Show the "Select All" button
+            selectAllButton.onclick = () => toggleAllFeeds(localFeedsData); // Pass localFeedsData to toggleAllFeeds
         } else {
             throw new Error('No feeds data received');
         }

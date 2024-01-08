@@ -26,7 +26,11 @@
 }
 
 #feedsContainer {
-    flex: 0 0 300px; /* Set the basis to 200px and don't allow it to grow or shrink */
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    /* Keep the fixed width of 300px */
+    flex: 0 0 400px;
     /* Additional styles for feedsContainer */
 }
 
@@ -70,8 +74,9 @@
 }
 
 #selectAllButton {
-    width: 95%;
-    display: none; /* Hide the button initially */
+    width: calc(100% - 1px); /* Adjust the width as needed, subtracting any padding */
+    margin: 0 auto; /* Auto margins for horizontal centering */
+    display: none; /* Use block display */
     /* Other styles for the button */
 }
 

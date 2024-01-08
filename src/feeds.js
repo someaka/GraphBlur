@@ -10,10 +10,12 @@ import * as d3 from 'd3';
 import { calculateSimilarity } from './simil.js';
 import { clearGraph, updateGraphForSelectedFeeds } from './graph.js';
 import { updateFeedElementStyles } from './domUtils';
+// Establish a connection to the SSE endpoint
 
 let isSameFeedClickedBool = false;
 let currentFeed = null;
 let articlesCache = {};
+const eventSource = new EventSource('/api/article-updates');
 
 selectAllButton.onclick = () => toggleAllFeeds();
 
@@ -27,6 +29,61 @@ feedsListElement.onclick = async () => {
 toggleButton.onclick = async () => {
     retractMainContent();
 };
+
+
+
+
+
+
+
+
+
+
+eventSource.onmessage = (event) => {
+  const article = JSON.parse(event.data);
+  updateArticlesUI(article);
+  cacheArticle(article);
+};
+
+function updateArticlesUI(article) {
+  // Check if an article container for this URL already exists
+  const articleElement = articlesElement.querySelector(`.article[data-url="${article.url}"]`);
+  if (articleElement) {
+    // Article already exists, update its content
+    const contentElement = articleElement.querySelector('.content');
+    if (contentElement) contentElement.innerHTML = article.content;
+  } else {
+    // Article is new, use the template to create a new element and append it to the list of articles
+    const articleTemplateClone = articleTemplate.content.cloneNode(true);
+    const newArticleElement = articleTemplateClone.querySelector('.article');
+    newArticleElement.dataset.url = article.url;
+
+    const titleElement = newArticleElement.querySelector('.title');
+    const textElement = newArticleElement.querySelector('.text');
+    // Assuming the article object contains a title and text property
+    titleElement.textContent = article.title;
+    textElement.innerHTML = article.content;
+
+    articlesElement.appendChild(newArticleElement);
+  }
+}
+
+function cacheArticle(article) {
+  // Add the article to the articlesCache object
+  articlesCache[article.url] = article;
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

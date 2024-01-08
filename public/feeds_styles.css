@@ -42,9 +42,10 @@
 #maincontent {
     position: relative;
     top: 0;
-    right: -30%; /* Start off-screen to the right */
-    width: 30%;
-    height: 100%;
+    right: -40%; /* Start off-screen to the right */
+    width: 40%;
+    height: 100vh; /* Set the height to the full viewport height */
+    overflow-y: auto; /* Enable vertical scrolling */
     transition: right 0.5s ease;
     z-index: 10;
 }

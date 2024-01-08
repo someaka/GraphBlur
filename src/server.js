@@ -7,6 +7,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import faiss from 'faiss-node';
 import { extract } from '@extractus/article-extractor';
+import { EventEmitter } from 'events';
+import { firefox } from 'playwright';
 
 const APIFY_TOKEN = process.env.APIFY_TOKEN;
 const NEWSBLUR_URL = 'https://www.newsblur.com';
@@ -16,13 +18,11 @@ let browser;
 let articleCache = {};
 let feedArticleCounts = {};
 
-// Wrap axios with axios-cookiejar-support
 wrapper(axios);
 
-// Create a new cookie jar
 const cookieJar = new CookieJar();
+const articleUpdateEmitter = new EventEmitter();
 
-// Get the directory name of the current module
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const server = express();
@@ -163,77 +163,103 @@ async function fetchStories(feedId, options = {}) {
 // Helper function to fetch a single article// Helper function to fetch a single article with retries
 async function fetchArticle(url, retries = 3) {
   if (typeof url !== 'string') {
-      console.error(`Invalid URL: ${url}`);
-      return { article: null, status: 'failure', error: 'Invalid URL' };
+    console.error(`Invalid URL: ${url}`);
+    return { article: null, status: 'failure', error: 'Invalid URL' };
   }
   let attempt = 0;
   while (attempt < retries) {
-      try {
-          const response = await axios.get(url, {
-              headers: {
-                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
-              }
-          });
-          return { article: await processArticle(response.data, url), status: 'success' };
-      } catch (error) {
-          if (attempt === retries - 1) {
-              console.error(`An error occurred while fetching the article from ${url}:`, error);
-              return { article: null, status: 'failure', error: error.message };
-          }
-          attempt++;
-          console.log(`Retrying fetch for ${url}, attempt ${attempt}`);
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000)); // Exponential backoff
+    try {
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
+        }
+      });
+      return { article: await processArticle(response.data, url), status: 'success' };
+    } catch (error) {
+      if (attempt === retries - 1) {
+        console.error(`An error occurred while fetching the article from ${url}:`, error);
+        retryFetchArticle(url); // Call the placeholder function when all retries fail
+        return { article: null, status: 'failure', error: error.message };
       }
+      attempt++;
+      console.log(`Retrying fetch for ${url}, attempt ${attempt}`);
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000)); // Exponential backoff
+    }
   }
 }
 
 
+
+async function fetchArticleContentWithPlaywright(url) {
+    const browser = await firefox.launch(); // Launch Firefox browser
+    const page = await browser.newPage(); // Open a new page
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 1000 }); // Navigate to the URL
+    const content = await page.content(); // Get the content of the page
+    await browser.close(); // Close the browser
+    return content; // Return the content
+}
+
+function retryFetchArticle(url) {
+  fetchArticleContentWithPlaywright(url)
+    .then(content => {
+      // Assuming 'article' is the object containing the article data
+      const article = { url, content };
+      articleUpdateEmitter.emit('articleUpdate', article);
+    })
+    .catch(error => {
+      console.error('Failed to fetch article:', error);
+    });
+}
+
+                                            
+
+
 async function processArticle(htmlData, url) {
   try {
-      // Log the URL being processed for reference
-      console.log(`Processing article from URL: ${url}`);
+    // Log the URL being processed for reference
+    console.log(`Processing article from URL: ${url}`);
 
-      // Use the extract function from @extractus/article-extractor
-      const article = await extract(htmlData, {
-          // You can pass additional options if needed
-      });
+    // Use the extract function from @extractus/article-extractor
+    const article = await extract(htmlData, {
+      // You can pass additional options if needed
+    });
 
-      if (article) {
-          // Clean the content
-          const cleanedContent = cleanArticleContent(article.content);
+    if (article) {
+      // Clean the content
+      const cleanedContent = cleanArticleContent(article.content);
 
-          // Log the extracted article title for reference
-          console.log(`Extracted article title: ${article.title}`);
-          return {
-              title: article.title,
-              text: cleanedContent, // Use the cleaned content
-              url: article.url
-          };
-      } else {
-          console.error('Failed to extract article content. No article data returned.');
-          return null;
-      }
-  } catch (error) {
-      console.error('An error occurred while extracting the article:', error);
+      // Log the extracted article title for reference
+      console.log(`Extracted article title: ${article.title}`);
+      return {
+        title: article.title,
+        text: cleanedContent, // Use the cleaned content
+        url: article.url
+      };
+    } else {
+      console.error('Failed to extract article content. No article data returned.');
       return null;
+    }
+  } catch (error) {
+    console.error('An error occurred while extracting the article:', error);
+    return null;
   }
 }
 
 import sanitizeHtml from 'sanitize-html';
 
 function cleanArticleContent(content) {
-    // Define the allowed tags and attributes
-    const clean = sanitizeHtml(content, {
-        allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2']),
-        allowedAttributes: {
-            ...sanitizeHtml.defaults.allowedAttributes,
-            'img': ['src', 'alt']
-        },
-        // Do not allow any CSS styles
-        allowedStyles: {}
-    });
+  // Define the allowed tags and attributes
+  const clean = sanitizeHtml(content, {
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2']),
+    allowedAttributes: {
+      ...sanitizeHtml.defaults.allowedAttributes,
+      'img': ['src', 'alt']
+    },
+    // Do not allow any CSS styles
+    allowedStyles: {}
+  });
 
-    return clean; // Return the cleaned content
+  return clean; // Return the cleaned content
 }
 
 
@@ -303,24 +329,43 @@ server.get('/feeds', async (req, res) => {
 server.post('/fetch-articles', async (req, res) => {
   const { feedId } = req.body;
   try {
-    // Use the cached unread stories if available
     const unreadStories = articleCache[feedId] || [];
-    //console.log(`Unread stories for feedId ${feedId}:`, unreadStories);
-
-    // Validate that unreadStories contains valid URLs
     const validUrls = unreadStories.filter(story => typeof story.story_permalink === 'string' && story.story_permalink.startsWith('http'));
-    console.log(`Valid URLs for feedId ${feedId}:`, validUrls.map(story => story.story_permalink));
 
-    const articles = await Promise.all(validUrls.map(story => fetchArticle(story.story_permalink)));
-    //console.log(`Articles fetched for feedId ${feedId}:`, articles); // Log the fetched articles
+    // Fetch articles in parallel and collect results
+    const fetchPromises = validUrls.map(async (story) => {
+      try {
+        return await fetchArticle(story.story_permalink);
+      } catch (error) {
+        // Queue the article for retry and return a placeholder
+        retryFetchArticle(story.story_permalink);
+        return { article: null, status: 'failure', error: error.message };
+      }
+    });
 
+    const articles = await Promise.all(fetchPromises);
     res.status(200).send({ articles });
   } catch (error) {
-    // console.error('Failed to fetch articles:', error);
     res.status(500).send({ articles: [], warning: 'Internal server error' });
   }
 });
 
+
+server.get('/article-updates', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  
+  const onArticleUpdate = (article) => {
+    res.write(`data: ${JSON.stringify(article)}\n\n`);
+  };
+
+  articleUpdateEmitter.on('articleUpdate', onArticleUpdate);
+
+  req.on('close', () => {
+    articleUpdateEmitter.removeListener('articleUpdate', onArticleUpdate);
+  });
+});
 
 // Make sure to close the browser when your application is closing or when you no longer need it
 process.on('exit', async () => {

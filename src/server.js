@@ -1,10 +1,7 @@
-import dotenv from 'dotenv';
-dotenv.config();
 import express from 'express';
 import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
-import cheerio from 'cheerio';
 import { calculateSimilarity, getEmbeddings } from './simil.js';
 import path from 'path';
 import { fileURLToPath } from 'url';

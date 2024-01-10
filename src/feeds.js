@@ -1,3 +1,8 @@
+import { feedsLogger as logger } from './logger.js';
+
+// Use logger.log instead of logger.log
+logger.log('This is a log message from feeds.js');
+
 const feedsListElement = document.querySelector('#feedslist');
 const mainContentElement = document.querySelector('#maincontent');
 const articlesElement = document.querySelector('#articles');
@@ -5,17 +10,15 @@ const loadingElement = document.querySelector('#loading');
 const articleTemplate = document.querySelector('#articleTemplate');
 const toggleButton = document.querySelector('#toggleButton');
 const selectAllButton = document.querySelector('#selectAllButton');
+// const mainContentSpinner = document.querySelector('#mainContentSpinner');
 
-import * as d3 from 'd3';
-import { calculateSimilarity } from './simil.js';
 import { clearGraph, updateGraphForSelectedFeeds } from './graph.js';
 import { updateFeedElementStyles } from './domUtils';
-// Establish a connection to the SSE endpoint
+
 
 let isSameFeedClickedBool = false;
 let currentFeed = null;
 let articlesCache = {};
-const eventSource = new EventSource('/api/article-updates');
 
 selectAllButton.onclick = () => toggleAllFeeds();
 
@@ -30,47 +33,64 @@ toggleButton.onclick = async () => {
     retractMainContent();
 };
 
+const eventSourceArticles = new EventSource('/api/article-updates');
 
-
-
-
-
-
-
-
-
-eventSource.onmessage = (event) => {
-  const article = JSON.parse(event.data);
-  updateArticlesUI(article);
-  cacheArticle(article);
+eventSourceArticles.onmessage = (event) => {
+    const article = JSON.parse(event.data);
+    updateArticlesUI(article);
+    cacheArticle(article);
 };
 
+
+const eventSource = new EventSource('/api/events');
+
+// Update graph when new similarity matrix is received
+eventSource.addEventListener('similarityMatrixUpdate', (event) => {
+    const similarityMatrix = JSON.parse(event.data);
+    updateGraphForSelectedFeeds(articlesCache, similarityMatrix);
+});
+
+
+
+
+
 function updateArticlesUI(article) {
-  // Check if an article container for this URL already exists
-  const articleElement = articlesElement.querySelector(`.article[data-url="${article.url}"]`);
-  if (articleElement) {
-    // Article already exists, update its content
-    const contentElement = articleElement.querySelector('.content');
-    if (contentElement) contentElement.innerHTML = article.content;
-  } else {
-    // Article is new, use the template to create a new element and append it to the list of articles
-    const articleTemplateClone = articleTemplate.content.cloneNode(true);
-    const newArticleElement = articleTemplateClone.querySelector('.article');
-    newArticleElement.dataset.url = article.url;
+    // Check if an article container for this UUID already exists
+    const articleElement = articlesElement.querySelector(`.article[data-id="${article.id}"]`);
+    if (articleElement) {
+        // Article already exists, update its content
+        const contentElement = articleElement.querySelector('.content');
+        if (contentElement) contentElement.innerHTML = article.content;
+    } else {
+        // Article is new, use the template to create a new element and append it to the list of articles
+        const articleTemplateClone = articleTemplate.content.cloneNode(true);
+        const newArticleElement = articleTemplateClone.querySelector('.article');
+        newArticleElement.dataset.id = article.id; // Set the data-id attribute to the article's UUID
 
-    const titleElement = newArticleElement.querySelector('.title');
-    const textElement = newArticleElement.querySelector('.text');
-    // Assuming the article object contains a title and text property
-    titleElement.textContent = article.title;
-    textElement.innerHTML = article.content;
+        const titleElement = newArticleElement.querySelector('.title');
+        const textElement = newArticleElement.querySelector('.text');
+        titleElement.textContent = article.title;
+        textElement.innerHTML = article.content;
 
-    articlesElement.appendChild(newArticleElement);
-  }
+        articlesElement.appendChild(newArticleElement);
+    }
 }
 
 function cacheArticle(article) {
-  // Add the article to the articlesCache object
-  articlesCache[article.url] = article;
+    const feedId = article.feedId;
+    if (!articlesCache[feedId]) {
+        articlesCache[feedId] = [];
+    }
+    // Check if the article is already in the cache to avoid duplicates
+    const existingArticleIndex = articlesCache[feedId].findIndex(cachedArticle => cachedArticle.id === article.id);
+    if (existingArticleIndex === -1) {
+        articlesCache[feedId].push({
+            id: article.id,
+            title: article.title,
+            content: article.content,
+            feedColor: article.feedColor
+        });
+    }
 }
 
 
@@ -95,39 +115,47 @@ async function fetchFeeds() {
         }
         const data = await response.text(); // Get the response as text first
 
-        // console.log('Response received:', data); // Log the raw response
+        // logger.log('Response received:', data); // Log the raw response
 
         try {
             const json = JSON.parse(data); // Try to parse it as JSON
             return json;
         } catch (e) {
-            console.error('Failed to parse JSON:', e);
+            logger.error('Failed to parse JSON:', e);
             return null; // Return null if JSON parsing fails
         }
     } catch (error) {
-        console.error('Failed to fetch feeds:', error);
+        logger.error('Failed to fetch feeds:', error);
         return null; // Return null if the fetch request fails
     }
 }
 
 
-async function fetchHtmlResults(urls, feedId) {
-    console.log(`Fetching articles for feedId: ${feedId}`);
+async function fetchHtmlResults(feedId) {
+    logger.log(`Fetching articles for feedId: ${feedId}`);
+
+    // Get all feed elements and filter the ones that have the 'clicked' class
+    const selectedFeedElements = document.querySelectorAll('#feedslist div.clicked');
+    // Extract the IDs of the selected feeds
+    const selectedFeedIds = Array.from(selectedFeedElements).map(feedEl => feedEl.id);
 
     try {
-        const response = await axios.post('/api/fetch-articles', { urls, feedId });
-        // console.log('Response from fetch-articles:', response.data); // Log the server response
+        const response = await axios.post('/api/fetch-articles', {
+            feedId,
+            selectedFeedIds // Include the selected feed IDs in the request body
+        });
+        // logger.log('Response from fetch-articles:', response.data); // Log the server response
         if (response.data.warning) {
-            console.warn('Warning from fetch-articles:', response.data.warning);
+            logger.warn('Warning from fetch-articles:', response.data.warning);
         }
         if (response.data && Array.isArray(response.data.articles)) {
             return response.data.articles; // Return the articles array
         } else {
-            console.error('fetchHtmlResults did not return an array:', response.data);
+            logger.error('fetchHtmlResults did not return an array:', response.data);
             return []; // Return an empty array if the response is not as expected
         }
     } catch (error) {
-        console.error('Failed to fetch articles:', error);
+        logger.error('Failed to fetch articles:', error);
         return []; // Return an empty array in case of an error
     }
 }
@@ -178,29 +206,6 @@ async function createFeedElement(feedData, feedIndex, totalFeeds) {
 }
 
 
-// export async function fetchArticles(feedData) {
-//     if (articlesCache[feedData.id]) {
-//         return articlesCache[feedData.id];
-//     } else {
-//         mainContentSpinner.style.display = 'block'; // Show the spinner in the main content
-
-//         const unreadUrls = feedData.unreadStories.slice(0, feedData.nt);
-//         console.log('Unread URLs:', unreadUrls); // Log the URLs to be fetched
-
-//         const feedId = feedData.id;
-//         const response = await fetchHtmlResults(unreadUrls, feedId);
-//         const { articles } = response;
-
-//         if (articles && Array.isArray(articles)) {
-//             articlesCache[feedData.id] = articles; // Cache the fetched articles
-//         }
-
-//         mainContentSpinner.style.display = 'none'; // Hide the spinner
-
-//         return articles || []; // Return the articles or an empty array if undefined
-//     }
-// }
-
 async function updateArticlesWithColor(articles, feedColor) {
     return articles.map(article => ({ ...article, feedColor }));
 }
@@ -208,7 +213,7 @@ async function updateArticlesWithColor(articles, feedColor) {
 async function loadArticles(feedData) {
     const { id: feedId, nt: expectedArticlesCount, unreadStories, feedColor } = feedData;
 
-    console.log(`Loading articles for feed ${feedId}`);
+    logger.log(`Loading articles for feed ${feedId}`);
 
     // Return cached articles if available
     if (articlesCache[feedId]) {
@@ -217,19 +222,19 @@ async function loadArticles(feedData) {
 
     mainContentSpinner.style.display = 'block'; // Show the spinner in the main content
 
-    const articleUrls = unreadStories.map(story => story.url);
-    const fetchedArticles = await fetchHtmlResults(articleUrls, feedId);
+    // const articleUrls = unreadStories.map(story => story.url);
+    const fetchedArticles = await fetchHtmlResults(feedId);
 
     // Hide the spinner in the main content
     mainContentSpinner.style.display = 'none';
 
     if (!Array.isArray(fetchedArticles)) {
-        console.error('No articles fetched for feed:', feedId);
+        logger.error('No articles fetched for feed:', feedId);
         return (articlesCache[feedId] = []); // Cache and return an empty array if no articles are fetched
     }
 
     if (fetchedArticles.length !== expectedArticlesCount) {
-        console.warn(`Expected ${expectedArticlesCount} articles for feed ${feedId}, but got ${fetchedArticles.length}`);
+        logger.warn(`Expected ${expectedArticlesCount} articles for feed ${feedId}, but got ${fetchedArticles.length}`);
     }
 
     // Update articles with feed color and cache the result
@@ -241,7 +246,7 @@ async function loadArticles(feedData) {
 
 function toggleMainContent(show) {
     // Slide the panel into view if show is true, otherwise slide it out of view
-    mainContentElement.style.right = show ? '0px' : '-30%';
+    mainContentElement.style.right = show ? '0px' : '-40%';
 }
 
 function toggleFeedElement(feedElement, originalColor) {
@@ -265,7 +270,7 @@ function expandMainContent(feedData) {
 }
 
 async function handleFeedClick(feedElement, feedData) {
-    // console.log('Feed clicked:', feedData);
+    // logger.log('Feed clicked:', feedData);
 
     if (isCurrentDisplayedFeed(feedData)) {
         handleCurrentDisplayedFeedClick(feedElement);
@@ -285,7 +290,7 @@ function isCurrentDisplayedFeed(feedData) {
 }
 
 function handleCurrentDisplayedFeedClick(feedElement) {
-    console.log('Currently displayed feed clicked, retracting main content');
+    logger.log('Currently displayed feed clicked, retracting main content');
     retractMainContent();
     toggleFeedElement(feedElement, feedElement.dataset.originalColor);
     updateGraphForSelectedFeeds(articlesCache); // Pass articlesCache as an argument
@@ -296,14 +301,14 @@ function isSelectedButNotDisplayed(feedElement) {
 }
 
 function handleSelectedButNotDisplayedFeedClick(feedElement) {
-    console.log('Feed is selected but not the displayed feed, unselecting');
+    logger.log('Feed is selected but not the displayed feed, unselecting');
     toggleFeedElement(feedElement, feedElement.dataset.originalColor);
     updateGraphForSelectedFeeds(articlesCache); // Pass articlesCache as an argument
 }
 
 async function handleNewFeedSelection(feedElement, feedData) {
     unselectCurrentFeed();
-    console.log('Selecting new feed and displaying its articles');
+    logger.log('Selecting new feed and displaying its articles');
     expandMainContent(feedData);
     toggleFeedElement(feedElement, feedElement.dataset.originalColor);
     await displayArticles(feedData);
@@ -345,7 +350,7 @@ async function displayArticles(feedData) {
 
     // Check if articles is an array before calling forEach
     if (!Array.isArray(articles)) {
-        console.error(`Expected articles to be an array, but got:`, articles);
+        logger.error(`Expected articles to be an array, but got:`, articles);
         return; // Exit the function if articles is not an array
     }
 
@@ -394,30 +399,6 @@ async function appendFeedsToDOM(feedsData) {
     feedsListElement.appendChild(feedsFragment);
 }
 
-async function displayResults(results) {
-    console.log(`Displaying ${results.length} results`); // Add this line to print the number of results
-
-    const articleFragment = document.createDocumentFragment();
-
-    try {
-        await Promise.all(results.map(async (articleData) => {
-            const articleTemplateElement = articleTemplate.content.cloneNode(true);
-
-            const titleElement = articleTemplateElement.querySelector('.title');
-            const textElement = articleTemplateElement.querySelector('.text');
-            if (titleElement) titleElement.textContent = articleData.title;
-            if (textElement) textElement.textContent = articleData.text;
-
-            articleFragment.appendChild(articleTemplateElement);
-        }));
-
-        articlesElement.appendChild(articleFragment);
-    } catch (error) {
-        // console.error('An error occurred while displaying results:', error);
-    } finally {
-        loadingElement.style.display = 'none';
-    }
-}
 
 
 async function toggleAllFeeds(feedsData) {
@@ -442,7 +423,7 @@ async function selectAllFeedsActions(allFeeds, feedsData) {
         const feedId = feedElement.id;
         const feedData = feedsData[feedId];
         if (!feedData || !Array.isArray(feedData.unreadStories)) {
-            console.error(`Feed data for ID ${feedId} is missing unreadStories or is not an array.`);
+            logger.error(`Feed data for ID ${feedId} is missing unreadStories or is not an array.`);
             continue;
         }
         await displayArticles(feedData);
@@ -459,7 +440,7 @@ function unselectAllFeedsActions() {
 
 window.onload = async () => {
     loadingElement.style.display = 'block';
-    mainContentElement.style.right = '-30%';
+    mainContentElement.style.right = '-40%';
 
     let localFeedsData; // Declare a local variable to store feeds data
 
@@ -473,7 +454,7 @@ window.onload = async () => {
             throw new Error('No feeds data received');
         }
     } catch (error) {
-        console.error('Failed to fetch feeds:', error);
+        logger.error('Failed to fetch feeds:', error);
     } finally {
         loadingElement.style.display = 'none';
     }

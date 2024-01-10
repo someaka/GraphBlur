@@ -1,14 +1,21 @@
+import { serverLogger as logger } from './logger.js';
+
+
+import dotenv from 'dotenv';
+dotenv.config();
 import express from 'express';
 import axios from 'axios';
+import path from 'path';
+import faiss from 'faiss-node';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
-import { calculateSimilarity, getEmbeddings } from './simil.js';
-import path from 'path';
 import { fileURLToPath } from 'url';
-import faiss from 'faiss-node';
 import { extract } from '@extractus/article-extractor';
 import { EventEmitter } from 'events';
 import { firefox } from 'playwright';
+import { v4 as uuidv4 } from 'uuid';
+
+import { createSimilarityMatrix } from './simil.js';
 
 const APIFY_TOKEN = process.env.APIFY_TOKEN;
 const NEWSBLUR_URL = 'https://www.newsblur.com';
@@ -67,19 +74,19 @@ async function performLogin(username, password) {
 }
 
 async function login(username, password) {
-  console.log(`Attempting login with username: ${username}`);
+  logger.log(`Attempting login with username: ${username}`);
 
   let cookies;
   try {
     cookies = await cookieJar.getCookies(NEWSBLUR_URL);
   } catch (error) {
-    console.error('Error getting cookies:', error);
+    logger.error('Error getting cookies:', error);
     throw new Error('Failed to retrieve cookies');
   }
 
   const validSessionCookie = await getValidSessionCookie(cookies);
   if (validSessionCookie) {
-    console.log('Using existing session cookie');
+    logger.log('Using existing session cookie');
     return { message: 'Already logged in using valid session cookie', sessionCookie: validSessionCookie };
   }
 
@@ -87,18 +94,18 @@ async function login(username, password) {
   try {
     response = await performLogin(username, password);
   } catch (error) {
-    console.error('Error during login request:', error);
+    logger.error('Error during login request:', error);
     return { error: 'Login request failed. Please try again later.' };
   }
 
   // Check the response for a successful login attempt
   if (response.data.authenticated) {
-    console.log('Login successful');
+    logger.log('Login successful');
     return { message: 'Login successful', ...response.data };
   } else {
     // Extract the error message from the response
     const errorMessage = response.data.errors?.__all__?.[0] || 'An error occurred during login.';
-    console.log('Login failed:', errorMessage);
+    logger.log('Login failed:', errorMessage);
     return { error: errorMessage };
   }
 }
@@ -163,7 +170,7 @@ async function fetchStories(feedId, options = {}) {
 // Helper function to fetch a single article// Helper function to fetch a single article with retries
 async function fetchArticle(url, retries = 3) {
   if (typeof url !== 'string') {
-    console.error(`Invalid URL: ${url}`);
+    logger.error(`Invalid URL: ${url}`);
     return { article: null, status: 'failure', error: 'Invalid URL' };
   }
   let attempt = 0;
@@ -177,12 +184,12 @@ async function fetchArticle(url, retries = 3) {
       return { article: await processArticle(response.data, url), status: 'success' };
     } catch (error) {
       if (attempt === retries - 1) {
-        console.error(`An error occurred while fetching the article from ${url}:`, error);
+        //logger.error(`An error occurred while fetching the article from ${url}:`, error);
         retryFetchArticle(url); // Call the placeholder function when all retries fail
         return { article: null, status: 'failure', error: error.message };
       }
       attempt++;
-      console.log(`Retrying fetch for ${url}, attempt ${attempt}`);
+      //logger.log(`Retrying fetch for ${url}, attempt ${attempt}`);
       await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000)); // Exponential backoff
     }
   }
@@ -191,12 +198,12 @@ async function fetchArticle(url, retries = 3) {
 
 
 async function fetchArticleContentWithPlaywright(url) {
-    const browser = await firefox.launch(); // Launch Firefox browser
-    const page = await browser.newPage(); // Open a new page
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 1000 }); // Navigate to the URL
-    const content = await page.content(); // Get the content of the page
-    await browser.close(); // Close the browser
-    return content; // Return the content
+  const browser = await firefox.launch(); // Launch Firefox browser
+  const page = await browser.newPage(); // Open a new page
+  await page.goto(url, { waitUntil: 'networkidle', timeout: 1000 }); // Navigate to the URL
+  const content = await page.content(); // Get the content of the page
+  await browser.close(); // Close the browser
+  return content; // Return the content
 }
 
 function retryFetchArticle(url) {
@@ -207,17 +214,17 @@ function retryFetchArticle(url) {
       articleUpdateEmitter.emit('articleUpdate', article);
     })
     .catch(error => {
-      console.error('Failed to fetch article:', error);
+      logger.error('Failed to fetch article:', error);
     });
 }
 
-                                            
+
 
 
 async function processArticle(htmlData, url) {
   try {
     // Log the URL being processed for reference
-    console.log(`Processing article from URL: ${url}`);
+    //logger.log(`Processing article from URL: ${url}`);
 
     // Use the extract function from @extractus/article-extractor
     const article = await extract(htmlData, {
@@ -229,19 +236,29 @@ async function processArticle(htmlData, url) {
       const cleanedContent = cleanArticleContent(article.content);
 
       // Log the extracted article title for reference
-      console.log(`Extracted article title: ${article.title}`);
+      //logger.log(`Extracted article title: ${article.title}`);
       return {
         title: article.title,
         text: cleanedContent, // Use the cleaned content
         url: article.url
       };
     } else {
-      console.error('Failed to extract article content. No article data returned.');
-      return null;
+      logger.error('Failed to extract article content. No article data returned.');
+      // Return an object with empty strings for title and text
+      return {
+        title: '',
+        text: '',
+        url: url // Keep the original URL
+      };
     }
   } catch (error) {
-    console.error('An error occurred while extracting the article:', error);
-    return null;
+    logger.error('An error occurred while extracting the article:', error);
+    // Return an object with empty strings for title and text
+    return {
+      title: '',
+      text: '',
+      url: url // Keep the original URL
+    };
   }
 }
 
@@ -312,50 +329,108 @@ server.get('/feeds', async (req, res) => {
       };
       // Cache the unread stories for each feed
       articleCache[feedId] = unreadStories;
-      // console.log("Unread stories for feed", feedId, ":", unreadStories.length);
+      // logger.log("Unread stories for feed", feedId, ":", unreadStories.length);
     });
 
     await Promise.all(promises);
-    //console.log('Feeds with unread stories:', feedsWithUnreadStories); // Log the final feeds data
+    //logger.log('Feeds with unread stories:', feedsWithUnreadStories); // Log the final feeds data
 
     res.status(200).send(feedsWithUnreadStories);
   } catch (error) {
-    console.error('Error processing feeds request:', error);
+    logger.error('Error processing feeds request:', error);
     res.status(500).send('Internal server error');
   }
 });
 
 
 server.post('/fetch-articles', async (req, res) => {
-  const { feedId } = req.body;
+  const { feedId, selectedFeedIds } = req.body;
+  if (!feedId || (!Array.isArray(selectedFeedIds) && typeof selectedFeedIds !== 'string')) {
+    return res.status(400).json({ error: 'Feed ID and selected feed IDs are required' });
+  }
+
   try {
-    const unreadStories = articleCache[feedId] || [];
-    const validUrls = unreadStories.filter(story => typeof story.story_permalink === 'string' && story.story_permalink.startsWith('http'));
+    const articlesWithContent = await fetchArticlesWithContentForFeeds(feedId);
+    res.status(200).json({ articles: articlesWithContent });
 
-    // Fetch articles in parallel and collect results
-    const fetchPromises = validUrls.map(async (story) => {
-      try {
-        return await fetchArticle(story.story_permalink);
-      } catch (error) {
-        // Queue the article for retry and return a placeholder
-        retryFetchArticle(story.story_permalink);
-        return { article: null, status: 'failure', error: error.message };
-      }
-    });
+    const articlesForMatrix = (await fetchArticlesWithContentForFeeds(selectedFeedIds))
+    .filter(article => article && article.article && article.article.title && article.article.text);
 
-    const articles = await Promise.all(fetchPromises);
-    res.status(200).send({ articles });
+    // logger.log("Articles for matrix:", articlesForMatrix);
+
+    // Calculate the similarity matrix in the background
+    const similarityMatrix = await createSimilarityMatrix(articlesForMatrix.map(article => article.article));
+    // Emit an event with the calculated similarity matrix
+    sendSimilarityMatrixUpdate(similarityMatrix);
   } catch (error) {
-    res.status(500).send({ articles: [], warning: 'Internal server error' });
+    logger.error('Error fetching articles:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+
+async function fetchArticlesWithContentForFeeds(feedIds) {
+  // If a single feedId is provided, convert it to an array
+  if (!Array.isArray(feedIds)) {
+    feedIds = [feedIds];
+  }
+
+  const allArticlesWithContent = [];
+
+  for (const feedId of feedIds) {
+    const unreadStories = articleCache[feedId] || [];
+    const validUrls = unreadStories.filter(story => typeof story.story_permalink === 'string' && story.story_permalink.startsWith('http'));
+
+    // Fetch content for each valid URL and assign a UUID
+    const articlesWithContent = await Promise.all(validUrls.map(async story => {
+      const articleContent = await fetchArticle(story.story_permalink);
+      return {
+        ...articleContent,
+        id: uuidv4(), // Generate a UUID as the ID
+        feedId: feedId // Include the feedId for later reference
+      };
+    }));
+
+    allArticlesWithContent.push(...articlesWithContent);
+  }
+
+  return allArticlesWithContent;
+}
+
+
+
+const clients = [];
+
+server.get('/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  // Add this client to the clients array
+  clients.push(res);
+
+  // When the client closes the connection, remove the corresponding response object
+  req.on('close', () => {
+    clients.splice(clients.indexOf(res), 1);
+  });
+});
+
+
+// Function to emit the similarity matrix update to all clients
+function sendSimilarityMatrixUpdate(similarityMatrix) {
+  //logger.log("Sending similarity matrix update to clients.");
+  //logger.log("Similarity Matrix:", similarityMatrix); // Add this line to log the similarity matrix
+  clients.forEach(clientRes => {
+    clientRes.write(`event: similarityMatrixUpdate\ndata: ${JSON.stringify(similarityMatrix)}\n\n`);
+  });
+  //logger.log("Sent similarity matrix update to clients.");
+}
 
 server.get('/article-updates', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
-  
+
   const onArticleUpdate = (article) => {
     res.write(`data: ${JSON.stringify(article)}\n\n`);
   };
@@ -367,6 +442,22 @@ server.get('/article-updates', (req, res) => {
   });
 });
 
+
+server.get('/similarity-matrix', async (req, res) => {
+  //logger.log("Received request to calculate similarity matrix.");
+  try {
+    const articles = Object.values(articleCache);
+    //logger.log(`Calculating similarity matrix for ${articles.length} articles.`);
+    const similarityMatrix = await createSimilarityMatrix(articles);
+
+    //logger.log("Similarity matrix calculated successfully.");
+    res.status(200).json({ similarityMatrix });
+  } catch (error) {
+    logger.error('Error calculating similarity matrix:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Make sure to close the browser when your application is closing or when you no longer need it
 process.on('exit', async () => {
   if (browser) await browser.close();
@@ -374,5 +465,5 @@ process.on('exit', async () => {
 
 
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  logger.log(`Server running on port ${PORT}`);
 });

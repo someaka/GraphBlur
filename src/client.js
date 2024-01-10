@@ -1,4 +1,8 @@
-// Get references to DOM elements
+import { clientLogger as logger } from './logger.js';
+
+// Use logger.log instead of logger.log
+logger.log('This is a log message from server.js');
+
 const formLogin = document.getElementById("formLogin");
 const submitButton = document.getElementById("submitButton");
 const inputUsername = document.getElementById("inputUsername");
@@ -17,7 +21,7 @@ async function login(username, password) {
         loginStatusMessage.textContent = errorMessage;
         loginStatusMessage.style.display = 'block'; // Show error message
       } else {
-        console.log('Login successful:', response.data);
+        logger.log('Login successful:', response.data);
         // Handle successful login, e.g., redirecting the user or storing login data
         loginStatusMessage.style.display = 'none'; // Hide error message
         window.location.href = 'feeds.html';
@@ -27,7 +31,7 @@ async function login(username, password) {
       // Handle other errors, such as network issues or server errors
       loginStatusMessage.textContent = error.response?.data?.error || 'An error occurred. Please try again.';
       loginStatusMessage.style.display = 'block'; // Show error message
-      console.error('Error during login:', error);
+      logger.error('Error during login:', error);
     }
   }
 

@@ -149,16 +149,9 @@ function updateGradients(graphData) {
 }
 
 function updateVisualization(graphData) {
-    //console.log('Current transform before update:', currentTransform);
-
     updateNodes(graphData);
     updateLinks(graphData);
     updateGradients(graphData);
-
-    // Reapply the stored transform to maintain the zoom state
-    // graphGroup.attr("transform", currentTransform);
-
-    //console.log('Current transform after update:', currentTransform);
 }
 
 
@@ -167,13 +160,30 @@ function initializeForceSimulation(graphData, width, height) {
     const links = graphData.links;
 
     simulation = d3.forceSimulation(nodes)
-        .force('link', d3.forceLink(links).id(d => d.id))
+        // Comment out or remove the forces you don't want D3 to handle
+        // .force('link', d3.forceLink(links).id(d => d.id))
         .force('charge', d3.forceManyBody())
         .force('center', d3.forceCenter(0, 0));
 
-    forceAtlas2(simulation.alpha(), defaultSettings, nodes, links);
+    simulation.on('tick', () => {
+        // Call forceAtlas2 to calculate the positions
+        forceAtlas2(simulation.alpha(), defaultSettings, nodes, links);
 
-    simulation.on('tick', () => updateVisualization(graphData));
+        // Update the positions of the nodes in the D3 selection
+        graphGroup.selectAll('circle')
+            .attr('cx', d => d.x)
+            .attr('cy', d => d.y);
+
+        // Update the positions of the links if necessary
+        graphGroup.selectAll('line')
+            .attr('x1', d => d.source.x)
+            .attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x)
+            .attr('y2', d => d.target.y);
+
+        // Call any other update functions necessary for your visualization
+        updateVisualization(graphData);
+    });
 }
 
 

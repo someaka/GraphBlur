@@ -31,4 +31,5 @@ export const similLogger = new Logger(false);
 export const serverLogger = new Logger(true); 
 export const clientLogger = new Logger(false); 
 export const similWorkerLogger = new Logger(false); 
+export const forceAtlasLogger = new Logger(false); 
 

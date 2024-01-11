@@ -12,7 +12,7 @@ const toggleButton = document.querySelector('#toggleButton');
 const selectAllButton = document.querySelector('#selectAllButton');
 // const mainContentSpinner = document.querySelector('#mainContentSpinner');
 
-import { clearGraph, updateGraphForSelectedFeeds } from './graph.js';
+import { updateGraphForSelectedFeeds } from './graph.js';
 import { updateFeedElementStyles } from './domUtils';
 
 

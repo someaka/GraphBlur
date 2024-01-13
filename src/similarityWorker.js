@@ -37,12 +37,12 @@ parentPort.on('message', ({ vector1, vector2, indexI, indexJ }) => {
 
 // Listen for a signal from the main thread to terminate the worker
 parentPort.on('shutdown', () => {
-    console.log('Worker is shutting down gracefully.');
+    logger.log('Worker is shutting down gracefully.');
     process.exit(0); // Exit with code 0 to indicate successful completion
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-    console.error(`Uncaught exception in worker: ${error.message}`);
+    logger.error(`Uncaught exception in worker: ${error.message}`);
     process.exit(1); // Exit with code 1 to indicate an error
 });

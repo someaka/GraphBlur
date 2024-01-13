@@ -13,7 +13,7 @@ let currentTransform = d3.zoomIdentity;
 function setupSVGContainer(selector, width, height) {
     const graphContainer = d3.select(selector);
     if (!graphContainer.node()) {
-        console.error(`The DOM element with selector "${selector}" was not found.`);
+        logger.error(`The DOM element with selector "${selector}" was not found.`);
         return;
     }
 

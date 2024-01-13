@@ -1,3 +1,5 @@
+import { visualGraphLogger as logger } from '../logger.js';
+
 import * as d3 from 'd3';
 import { forceAtlas2, defaultSettings, initializeGraphElements } from '../ForceAtlas2/forceAtlas.js';
 import { defineZoomBehavior, applyDragBehavior, setupSVGContainer } from './graphInteraction.js';
@@ -11,14 +13,10 @@ const DEFAULT_HEIGHT = 600;
 
 let currentForceAtlas2Settings = { ...defaultSettings };
 
-// Function to update the forceAtlas2 settings with new parameters
-function updateForceAtlas2Settings(newParams, settings = defaultSettings) {
-    // Merge new parameters with the provided settings
-    currentForceAtlas2Settings = {
-        ...settings,
-        ...newParams
-    };
-}
+let graphData = {
+    nodes: [],
+    links: []
+};
 
 // Setter function for graphGroup
 function setGraphGroup(group) {
@@ -38,11 +36,11 @@ function getGraphContainerDimensions(selector) {
 }
 
 
-function initializeForceSimulation(graphData, forceAtlas2Settings) {
+function initializeForceSimulation(graphData) {
     const nodes = graphData.nodes;
     const links = graphData.links;
-    const width = forceAtlas2Settings.width;
-    const height = forceAtlas2Settings.height;
+    const width = currentForceAtlas2Settings.width;
+    const height = currentForceAtlas2Settings.height;
 
     // Sanitize node data
     nodes.forEach(node => {
@@ -53,14 +51,24 @@ function initializeForceSimulation(graphData, forceAtlas2Settings) {
     });
 
     simulation = d3.forceSimulation(nodes)
-        .force('link', d3.forceLink(links).id(d => d.id)) // Set up the link force
-        .force('charge', d3.forceManyBody())
-        .force('center', d3.forceCenter(width / 2, height / 2));
+        // .force('link',
+        //     d3.forceLink(links)
+        //         .id(d => d.id)
+        //         .distance(5)
+        //         .strength(1)
+        // )
+        // .force('charge',
+        //     d3.forceManyBody()
+        //         .strength(-1)
+        // )
+        .alphaMin(0.001)
+        .alphaTarget(0.3);
+    // .force('center', d3.forceCenter(width / 2, height / 2)); 
 
     simulation.on('tick', () => {
         try {
             // Call forceAtlas2 to calculate the positions
-            forceAtlas2(simulation.alpha(), forceAtlas2Settings, nodes, links);
+            forceAtlas2(simulation.alpha(), currentForceAtlas2Settings, nodes, links);
 
             // Update the positions of the nodes in the D3 selection
             graphGroup.selectAll('circle')
@@ -77,7 +85,7 @@ function initializeForceSimulation(graphData, forceAtlas2Settings) {
             // Call any other update functions necessary for your visualization
             updateVisualization(graphData);
         } catch (error) {
-            console.error('Simulation tick failed:', error);
+            logger.error('Simulation tick failed:', error);
             simulation.stop(); // Stop the simulation in case of error
         }
     });
@@ -118,14 +126,16 @@ function constructGraphData(articles, dimensions = { width: DEFAULT_WIDTH, heigh
 
 
 
-function visualizeGraph(graphData, selector = '#graph-container') {
+function visualizeGraph(newGraphData, selector = '#graph-container') {
+    // Update the global graphData with the new data
+    graphData = newGraphData;
     const { width, height } = getGraphContainerDimensions(selector);
     let initialTransform = d3.zoomIdentity;
 
     updateForceAtlas2Settings({ width, height });
     setupSVGContainer(selector, width, height);
     defineZoomBehavior(initialTransform);
-    initializeForceSimulation(graphData, currentForceAtlas2Settings);
+    initializeForceSimulation(graphData);
     createVisualElements(graphData);
     applyDragBehavior(simulation);
 
@@ -146,15 +156,28 @@ function clearGraph() {
 }
 
 
-function updateForceParameters() {
-    if (simulation && simulation.force("link")) {
-        // Use the currentForceAtlas2Settings to update the simulation
-        forceAtlas2(simulation.alpha(), currentForceAtlas2Settings, simulation.nodes(), simulation.force("link").links());
 
+
+// Function to update the forceAtlas2 settings with new parameters
+function updateForceAtlas2Settings(newParams, settings = currentForceAtlas2Settings) {
+    // Merge new parameters with the provided settings
+    currentForceAtlas2Settings = {
+        ...settings,
+        ...newParams
+    };
+    logger.log("Force parameters updated with:", JSON.stringify(currentForceAtlas2Settings));
+
+    if (simulation) {
+        // Use the currentForceAtlas2Settings to update the simulation
+        forceAtlas2(simulation.alpha(), currentForceAtlas2Settings, graphData.nodes, graphData.links);
+
+        logger.log("Force simulation updated with:", currentForceAtlas2Settings);
         // Restart the simulation for the changes to take effect
         simulation.alpha(1).restart();
     }
 }
+
+
 
 export {
     constructGraphData,
@@ -162,7 +185,6 @@ export {
     clearGraph,
     setGraphGroup,
     setDefsContainer,
-    updateForceParameters,
     updateForceAtlas2Settings,
     graphGroup,
     simulation,

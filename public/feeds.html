@@ -11,7 +11,6 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
     <link rel="stylesheet" href="feeds_styles.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
-    <link href="https://unpkg.com/vis-network/styles/vis-network.min.css" rel="stylesheet" type="text/css" />
 </head>
 
 <body>
@@ -36,9 +35,8 @@
                     <label for="gravitySlider">Gravity:</label>
                     <div class="range-slider">
                         <input type="range" id="gravitySlider" min="0" max="100" value="50" class="slider"
-                            data-output="gravityOutput" data-scale-min="0.000001" data-scale-max="100" <!-- Updated max
-                            value -->
-                        data-scale-factor="1" data-precision="6" data-scale-type="log">
+                            data-output="gravityOutput" data-scale-min="0.000001" data-scale-max="100"
+                            data-scale-factor="1" data-precision="6" data-scale-type="log">
                         <output id="gravityOutput">1</output>
                         <div class="slider-min-max">
                             <span class="slider-min">0.000001</span>
@@ -82,12 +80,12 @@
                     <label for="repulsionStrengthSlider">Repulsion Strength:</label>
                     <div class="range-slider">
                         <input type="range" id="repulsionStrengthSlider" min="0" max="100" class="slider"
-                            data-output="repulsionStrengthOutput" data-scale-min="0.0001" data-scale-max="1000"
+                            data-output="repulsionStrengthOutput" data-scale-min="0.0001" data-scale-max="5000"
                             data-scale-factor="1" data-precision="4" data-scale-type="log">
                         <output id="repulsionStrengthOutput">1.0000</output>
                         <div class="slider-min-max">
                             <span class="slider-min">0.0001</span>
-                            <span class="slider-max">1000</span>
+                            <span class="slider-max">5000</span>
                         </div>
                     </div>
                 </div>

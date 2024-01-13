@@ -1,6 +1,6 @@
 export function updateFeedElementStyles(feedElement, isSelected) {
     if (!feedElement || !feedElement.classList) {
-        console.error('Invalid feedElement passed to updateFeedElementStyles:', feedElement);
+        logger.error('Invalid feedElement passed to updateFeedElementStyles:', feedElement);
         return; // Exit the function if feedElement is not valid
       }
     if (isSelected) {

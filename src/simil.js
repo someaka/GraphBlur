@@ -24,16 +24,16 @@ const similarityWorker = new Worker(workerPath);
 
 // And update the event listeners accordingly
 similarityWorker.on('message', (msg) => {
-    console.log('Message from similarity worker:', msg);
+    logger.log('Message from similarity worker:', msg);
 });
 
 similarityWorker.on('error', (error) => {
-    console.error('Similarity worker error:', error);
+    logger.error('Similarity worker error:', error);
 });
 
 similarityWorker.on('exit', (code) => {
     if (code !== 0) {
-        console.error(`Similarity worker stopped with exit code ${code}`);
+        logger.error(`Similarity worker stopped with exit code ${code}`);
     }
 });
 
@@ -71,7 +71,7 @@ async function getEmbeddings(texts) {
             if (error.response && error.response.status === 503) {
                 // Wait for the estimated time before retrying
                 const waitTime = error.response.data.estimated_time || 30;
-                console.log(`API is unavailable, retrying in ${waitTime} seconds...`);
+                logger.log(`API is unavailable, retrying in ${waitTime} seconds...`);
                 await new Promise(resolve => setTimeout(resolve, waitTime * 100));
             } else {
                 // Other errors should not be retried
@@ -171,12 +171,12 @@ async function processTasks(workerPool, numArticles, embeddings, similarityMatri
                         similarityMatrix[indexI][indexJ] = similarity;
                         similarityMatrix[indexJ][indexI] = similarity;
                     } else {
-                        console.error(`Invalid indices or uninitialized matrix: indexI=${indexI}, indexJ=${indexJ}`);
+                        logger.error(`Invalid indices or uninitialized matrix: indexI=${indexI}, indexJ=${indexJ}`);
                     }
                     handleNextTask();
                 } else {
                     // Handle other types of messages, such as the greeting message
-                    console.log('Message from worker:', message);
+                    logger.log('Message from worker:', message);
                 }
             });
 

@@ -6,7 +6,7 @@ const defaultSettings = {
     gravity: 0.001,
     scalingRatio: 2.0,
     edgeWeightInfluence: 1,
-    dissuadeHubs: true,
+    dissuadeHubs: false,
     preventOverlap: true,
     barnesHutTheta: 1.2,
     repulsionStrength: 0.1,
@@ -37,10 +37,10 @@ function initializeGraphElements(nodes, links, width = 800, height = 600) {
 
     // Initialize node properties with slight randomization to avoid zero distance
     nodes.forEach(node => {
-        node.x = typeof node.x === 'number' && !isNaN(node.x) ? node.x : (Math.random() - 0.5) * 10;
-        node.y = typeof node.y === 'number' && !isNaN(node.y) ? node.y : (Math.random() - 0.5) * 10;
-        node.vx = typeof node.vx === 'number' && !isNaN(node.vx) ? node.vx : 0;
-        node.vy = typeof node.vy === 'number' && !isNaN(node.vy) ? node.vy : 0;
+        node.x = typeof node.x === 'number' && !isNaN(node.x) ? node.x : defaultX +(Math.random() - 0.5) * 10;
+        node.y = typeof node.y === 'number' && !isNaN(node.y) ? node.y : defaultY +(Math.random() - 0.5) * 10;
+        node.vx = typeof node.vx === 'number' && !isNaN(node.vx) ? node.vx : defaultVx;
+        node.vy = typeof node.vy === 'number' && !isNaN(node.vy) ? node.vy : defaultVy;
     });
 
     // Log the node properties to confirm they are set correctly
@@ -91,6 +91,7 @@ function verifyForceAtlas2Parameters(nodes, edges) {
 
 function forceAtlas2(alpha, customSettings, nodes, edges) {
     logger.log("Edges received in forceAtlas2:", edges);
+    logger.log("Applying forceAtlas2 with settings:", JSON.stringify(customSettings));
 
     // Calculate degrees for nodes based on link weights
     calculateDegrees(nodes, edges);

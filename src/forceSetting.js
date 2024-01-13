@@ -73,15 +73,13 @@ function initializeSliders() {
         slider.addEventListener('input', () => {
             updateOutput(slider, output, scale, precision, scaleType);
             // After updating the output, call the function to update the simulation settings
-            // You need to import this function from graph.js
             updateSimulationSettings({
-                // Pass the new settings based on the slider values
-                // For example:
-                gravity: document.getElementById('gravitySlider').value,
-                scalingRatio: document.getElementById('scalingRatioSlider').value,
-                barnesHutTheta: document.getElementById('barnesHutThetaSlider').value,
-                repulsionStrength: document.getElementById('repulsionStrengthSlider').value,
-                coolingRate: document.getElementById('coolingRateSlider').value
+                // Pass the new settings based on the scaled values
+                gravity: parseFloat(document.getElementById('gravityOutput').textContent),
+                scalingRatio: parseFloat(document.getElementById('scalingRatioOutput').textContent),
+                barnesHutTheta: parseFloat(document.getElementById('barnesHutThetaOutput').textContent),
+                repulsionStrength: parseFloat(document.getElementById('repulsionStrengthOutput').textContent),
+                coolingRate: parseFloat(document.getElementById('coolingRateOutput').textContent)
             });
         });
 

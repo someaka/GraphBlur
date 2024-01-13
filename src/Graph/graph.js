@@ -7,7 +7,6 @@ import {
     constructGraphData,
     visualizeGraph,
     clearGraph,
-    updateForceParameters,
     updateForceAtlas2Settings 
 } from "./visualizeGraph.js";
 
@@ -25,10 +24,9 @@ function filterEdgesByPercentile(edges, percentile = 0.2) {
 
 
 function updateSimulationSettings(newSettings) {
+    logger.log('Updating simulation settings with:', newSettings);
     updateForceAtlas2Settings(newSettings);
-    updateForceParameters(newSettings);
 }
-
 
 async function updateGraphForSelectedFeeds(articlesCache, similarityMatrix = null) {
     logger.log('Articles cache:', articlesCache); // Log the entire articlesCache

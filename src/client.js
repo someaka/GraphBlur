@@ -34,7 +34,7 @@ async function handleLogin(event) {
 
   try {
     const response = await axios.post('/api/login', { username, password }, { withCredentials: true });
-    console.log("Login response:", response.data);
+    logger.log("Login response:", response.data);
     if (response.data.authenticated) {
       // Save the session cookie if present and redirect to feeds.html
       if (response.data.sessionCookie) {

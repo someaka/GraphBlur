@@ -37,8 +37,8 @@ function initializeGraphElements(nodes, links, width = 800, height = 600) {
 
     // Initialize node properties with slight randomization to avoid zero distance
     nodes.forEach(node => {
-        node.x = typeof node.x === 'number' && !isNaN(node.x) ? node.x :  (Math.random() - 0.5) * 10;
-        node.y = typeof node.y === 'number' && !isNaN(node.y) ? node.y :  (Math.random() - 0.5) * 10;
+        node.x = typeof node.x === 'number' && !isNaN(node.x) ? node.x : (Math.random() - 0.5) * 10;
+        node.y = typeof node.y === 'number' && !isNaN(node.y) ? node.y : (Math.random() - 0.5) * 10;
         node.vx = typeof node.vx === 'number' && !isNaN(node.vx) ? node.vx : 0;
         node.vy = typeof node.vy === 'number' && !isNaN(node.vy) ? node.vy : 0;
     });
@@ -117,6 +117,9 @@ function forceAtlas2(alpha, customSettings, nodes, edges) {
         nodeRadius
     } = settings;
 
+    // Define the maximum velocity
+    const maxVelocity = customSettings.maxVelocity || 1; // Use a default value if not specified
+
     // Define k based on width and height (example: k = Math.sqrt((width * height) / nodes.length))
     const k = Math.sqrt((width * height) / nodes.length);
 
@@ -157,7 +160,7 @@ function forceAtlas2(alpha, customSettings, nodes, edges) {
         }
 
         // Update velocity and position based on forces
-        updateVelocity(node, cooling);
+        updateVelocity(node, cooling, maxVelocity);
         updatePosition(node, width, height);
 
 
@@ -256,10 +259,19 @@ function applyPreventOverlap(nodes, nodeRadius) {
     }
 }
 
-function updateVelocity(node, cooling) {
+function clipVelocity(node, maxVelocity) {
+    const length = Math.sqrt(node.vx * node.vx + node.vy * node.vy);
+    if (length > maxVelocity) {
+        node.vx *= maxVelocity / length;
+        node.vy *= maxVelocity / length;
+    }
+}
+
+function updateVelocity(node, cooling, maxVelocity) {
     // Apply the cooling factor to the velocity
     node.vx *= cooling;
     node.vy *= cooling;
+    clipVelocity(node, maxVelocity);
 }
 
 function updatePosition(node, width, height) {

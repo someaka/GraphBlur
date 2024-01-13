@@ -1,21 +1,31 @@
-
 .spinner {
-    border: 4px solid rgba(0, 0, 0, 0.1); /* Light grey border */
-    border-top-color: #09f; /* Blue color for the top bordr */
-    border-radius: 50%; /* Circular border */
-    width: 50px; /* Width of the spinner */
-    height: 50px; /* Height of the spinner */
-    position: fixed; /* Fixed position */
-    top: 50%; /* Center vertically */
-    left: 50%; /* Center horizontally */
-    transform: translate(-50%, -50%); /* Offset the spinner to truly center it */
-    animation: spin 1s linear infinite; /* Spin animation */
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    /* Light grey border */
+    border-top-color: #09f;
+    /* Blue color for the top bordr */
+    border-radius: 50%;
+    /* Circular border */
+    width: 50px;
+    /* Width of the spinner */
+    height: 50px;
+    /* Height of the spinner */
+    position: fixed;
+    /* Fixed position */
+    top: 50%;
+    /* Center vertically */
+    left: 50%;
+    /* Center horizontally */
+    transform: translate(-50%, -50%);
+    /* Offset the spinner to truly center it */
+    animation: spin 1s linear infinite;
+    /* Spin animation */
 }
 
 @keyframes spin {
     0% {
         transform: translate(-50%, -50%) rotate(0deg);
     }
+
     100% {
         transform: translate(-50%, -50%) rotate(360deg);
     }
@@ -30,28 +40,41 @@
     flex-direction: column;
     align-items: stretch;
     flex: 0 0 400px;
-    height: 100vh; /* Set the height to the full viewport height */
-    overflow-y: auto; /* Enable vertical scrolling */
+    height: 100vh;
+    /* Set the height to the full viewport height */
+    overflow-y: auto;
+    /* Enable vertical scrolling */
 }
 
 #graphcontent {
-    flex: 1; /* Assign a flex-grow value to control the width */
+    flex: 1;
+    /* Assign a flex-grow value to control the width */
     /* Additional styles */
+}
+
+#graph-container {
+    height: 100vh;
+    /* Full height of the viewport */
+    /* width: 100vw; Full width of the viewport */
 }
 
 #maincontent {
     position: relative;
     top: 0;
-    right: -40%; /* Start off-screen to the right */
+    right: -40%;
+    /* Start off-screen to the right */
     width: 40%;
-    height: 100vh; /* Set the height to the full viewport height */
-    overflow-y: auto; /* Enable vertical scrolling */
+    height: 100vh;
+    /* Set the height to the full viewport height */
+    overflow-y: auto;
+    /* Enable vertical scrolling */
     transition: right 0.5s ease;
     z-index: 10;
 }
 
 .panel_overlay {
-    right: 0; /* Bring the overlay panel on-screen */
+    right: 0;
+    /* Bring the overlay panel on-screen */
 }
 
 #feedslist {
@@ -75,9 +98,12 @@
 }
 
 #selectAllButton {
-    width: calc(100% - 0px); /* Adjust the width as needed, subtracting any padding */
-    margin: 0 auto; /* Auto margins for horizontal centering */
-    display: none; /* Use block display */
+    width: calc(100% - 0px);
+    /* Adjust the width as needed, subtracting any padding */
+    margin: 0 auto;
+    /* Auto margins for horizontal centering */
+    display: none;
+    /* Use block display */
     /* Other styles for the button */
 }
 
@@ -86,4 +112,66 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+}
+
+
+
+.slider-container {
+    margin-bottom: 20px;
+}
+
+.range-slider {
+    position: relative;
+    width: 100%;
+}
+
+.slider {
+    -webkit-appearance: none; /* Override default appearance for WebKit browsers */
+    appearance: none; /* Standard syntax: Override default appearance for all browsers */
+    width: 100%; /* Full-width */
+    height: 2px; /* Specified height */
+    background: #ddd; /* Grey background */
+    outline: none; /* Remove outline */
+    opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+    -webkit-transition: .2s; /* 0.2 seconds transition on hover for WebKit browsers */
+    transition: opacity .2s;
+}
+
+.slider:hover {
+    opacity: 1; /* Fully opaque on hover */
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none; /* Override default look */
+    appearance: none;
+    width: 25px; /* Set a specific slider handle width */
+    height: 25px; /* Slider handle height */
+    background: #4CAF50; /* Green background */
+    cursor: pointer; /* Cursor on hover */
+}
+
+.slider::-moz-range-thumb {
+    width: 25px; /* Set a specific slider handle width */
+    height: 25px; /* Slider handle height */
+    background: #4CAF50; /* Green background */
+    cursor: pointer; /* Cursor on hover */
+}
+
+.slider-min-max {
+    display: flex;
+    justify-content: space-between;
+    font-size: small;
+}
+
+.slider-min,
+.slider-max {
+    color: #888;
+}
+
+.output {
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: small;
 }

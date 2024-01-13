@@ -1,57 +1,62 @@
-import { clientLogger as logger } from './logger.js';
-
-// Use logger.log instead of logger.log
-logger.log('This is a log message from server.js');
-
+// Define UI elements
 const formLogin = document.getElementById("formLogin");
 const submitButton = document.getElementById("submitButton");
 const inputUsername = document.getElementById("inputUsername");
 const inputPassword = document.getElementById("inputPassword");
-const loginStatusMessage = document.getElementById("loginStatusMessage"); // Add this line to reference the status message element
+const loginStatusMessage = document.getElementById("loginStatusMessage");
 
-// Define async function to handle login
-async function login(username, password) {
-    try {
-      const response = await axios.post('/api/login', { username, password });
-      // Check if the response indicates that the login was not authenticated
-      if (!response.data.authenticated) {
-        // Handle the case where the server indicates invalid credentials
-        // Safely access the errors property
-        const errorMessage = response.data.error || 'An error occurred during login.';
-        loginStatusMessage.textContent = errorMessage;
-        loginStatusMessage.style.display = 'block'; // Show error message
-      } else {
-        logger.log('Login successful:', response.data);
-        // Handle successful login, e.g., redirecting the user or storing login data
-        loginStatusMessage.style.display = 'none'; // Hide error message
-        window.location.href = 'feeds.html';
+// Helper function to display login errors
+function displayLoginError(message) {
+  loginStatusMessage.textContent = message;
+  loginStatusMessage.classList.add('error'); // Ensure you have an 'error' class in your CSS for styling
+  loginStatusMessage.style.display = 'block';
+}
 
-      }
-    } catch (error) {
-      // Handle other errors, such as network issues or server errors
-      loginStatusMessage.textContent = error.response?.data?.error || 'An error occurred. Please try again.';
-      loginStatusMessage.style.display = 'block'; // Show error message
-      logger.error('Error during login:', error);
-    }
+// Helper function to reset the submit button
+function resetSubmitButton() {
+  submitButton.disabled = false;
+  submitButton.textContent = "Submit";
+}
+
+// Function to handle form submission
+async function handleLogin(event) {
+  event.preventDefault();
+  const username = inputUsername.value.trim();
+  const password = inputPassword.value.trim(); // Password is optional
+
+  if (!username) {
+    displayLoginError('Please enter a username.');
+    return;
   }
 
-// Add event listener to form
-formLogin.addEventListener("submit", async function (event) {
-    event.preventDefault();
+  submitButton.disabled = true;
+  submitButton.textContent = "Loading...";
 
-    const username = inputUsername.value;
-    const password = inputPassword.value || ""; // Password is optional
-
-    submitButton.disabled = true;
-    submitButton.textContent = "Loading...";
-
-    try {
-        await login(username, password);
-        // Redirect or update UI after successful login
-    } catch (error) {
-        // Handle error, possibly already handled inside login function
-    } finally {
-        submitButton.disabled = false;
-        submitButton.textContent = "Submit";
+  try {
+    const response = await axios.post('/api/login', { username, password }, { withCredentials: true });
+    console.log("Login response:", response.data);
+    if (response.data.authenticated) {
+      // Save the session cookie if present and redirect to feeds.html
+      if (response.data.sessionCookie) {
+        localStorage.setItem('sessionid', response.data.sessionCookie);
+      }
+      window.location.href = '/feeds.html';
+    } else {
+      displayLoginError(response.data.error || 'Login failed. Please try again.');
     }
+  } catch (error) {
+    displayLoginError(error.response?.data?.error || 'An error occurred. Please try again.');
+  } finally {
+    resetSubmitButton();
+  }
+}
+
+// Attach event listener to the form
+formLogin.addEventListener("submit", handleLogin);
+
+// Optionally, you can clear any previous login status messages when the user focuses on the input fields
+[inputUsername, inputPassword].forEach(input => {
+  input.addEventListener('focus', () => {
+    loginStatusMessage.style.display = 'none';
+  });
 });

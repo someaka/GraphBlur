@@ -2,11 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ForceAtlas2 Graph Visualization</title>
+    <title>Graph Visualization</title>
     <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        /* Add any additional styles you need for your graph here */
+        #graph {
+            width: 800px;
+            height: 600px;
+        }
+    </style>
 </head>
 <body>
+    <!-- Create an SVG element instead of a div for the graph container -->
     <svg id="graph"></svg>
     <script type="module" src="./main.js"></script>
 </body>

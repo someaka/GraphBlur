@@ -3,6 +3,7 @@ import { forceAtlas2, defaultSettings } from './forceAtlas.js';
 
 // Define the width and height of the graph
 const width = 800, height = 600;
+const svg = d3.select('#graph').attr('width', width).attr('height', height);
 
 // Expanded example nodes and edges with different weights and links
 const nodes = [
@@ -56,6 +57,7 @@ function dragended(event, d) {
   d.fy = null;
 }
 
+
 function ticked() {
   // Call forceAtlas2 to calculate the positions
   forceAtlas2(simulation.alpha(), defaultSettings, nodes, edges);
@@ -65,15 +67,15 @@ function ticked() {
     .attr('cx', d => d.x)
     .attr('cy', d => d.y);
 
-  svg.selectAll('line')
-    .attr('x1', d => d.source.x)
-    .attr('y1', d => d.source.y)
-    .attr('x2', d => d.target.x)
-    .attr('y2', d => d.target.y);
+  // Keep the simulation running at a low alpha level
+  if (simulation.alpha() < 0.05) {
+    simulation.alphaTarget(0.1);
+  } else {
+    simulation.alphaTarget(0); // Set to 0 to let the simulation cool down naturally
+  }
 }
 
-// Select the SVG element and set its width and height
-const svg = d3.select('#graph').attr('width', width).attr('height', height);
+
 
 // Create the SVG circles for the nodes and call the drag behavior
 svg.selectAll('circle')

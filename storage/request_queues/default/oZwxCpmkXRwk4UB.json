@@ -1,9 +1,0 @@
-{
-	"id": "oZwxCpmkXRwk4UB",
-	"json": "{\"id\":\"oZwxCpmkXRwk4UB\",\"url\":\"https://sebsauvage.net/links/?do=daily&day=20240105\",\"uniqueKey\":\"https://sebsauvage.net/links?day=20240105&do=daily\",\"method\":\"GET\",\"noRetry\":false,\"retryCount\":0,\"errorMessages\":[],\"headers\":{},\"userData\":{}}",
-	"method": "GET",
-	"orderNo": 1704620425459,
-	"retryCount": 0,
-	"uniqueKey": "https://sebsauvage.net/links?day=20240105&do=daily",
-	"url": "https://sebsauvage.net/links/?do=daily&day=20240105"
-}

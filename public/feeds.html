@@ -11,6 +11,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
     <link rel="stylesheet" href="feeds_styles.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link href="https://unpkg.com/vis-network/styles/vis-network.min.css" rel="stylesheet" type="text/css" />
 </head>
 
 <body>
@@ -25,7 +26,85 @@
         </div>
         <div id="maincontent" class="panel_overlay">
             <div style="text-align: right;">
+                <button id="forcesButton" class="btn btn-primary">Forces</button>
                 <button id="toggleButton" class="btn btn-primary">Toggle Articles</button>
+            </div>
+            <div id="articles"></div>
+            <div id="forceSettings" style="display: none;">
+                <!-- Gravity Slider -->
+                <div class="slider-container">
+                    <label for="gravitySlider">Gravity:</label>
+                    <div class="range-slider">
+                        <input type="range" id="gravitySlider" min="0" max="100" value="50" class="slider"
+                            data-output="gravityOutput" data-scale-min="0.000001" data-scale-max="10"
+                            data-scale-factor="1" data-precision="6" data-scale-type="log">
+                        <output id="gravityOutput">1</output>
+                        <div class="slider-min-max">
+                            <span class="slider-min">0.000001</span>
+                            <span class="slider-max">10</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scaling Ratio Slider -->
+                <div class="slider-container">
+                    <label for="scalingRatioSlider">Scaling Ratio:</label>
+                    <div class="range-slider">
+                        <input type="range" id="scalingRatioSlider" min="0" max="100" value="20" class="slider"
+                            data-output="scalingRatioOutput" data-scale-min="0" data-scale-max="2" data-scale-factor="1"
+                            data-precision="2" data-scale-type="linear">
+                        <output id="scalingRatioOutput">1.00</output>
+                        <div class="slider-min-max">
+                            <span class="slider-min">0</span>
+                            <span class="slider-max">2</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barnes Hut Theta Slider -->
+                <div class="slider-container">
+                    <label for="barnesHutThetaSlider">Barnes Hut Theta:</label>
+                    <div class="range-slider">
+                        <input type="range" id="barnesHutThetaSlider" min="0" max="100" value="60" class="slider"
+                            data-output="barnesHutThetaOutput" data-scale-min="0" data-scale-max="2"
+                            data-scale-factor="1" data-precision="2" data-scale-type="linear">
+                        <output id="barnesHutThetaOutput">1.20</output>
+                        <div class="slider-min-max">
+                            <span class="slider-min">0</span>
+                            <span class="slider-max">2</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Repulsion Strength Slider -->
+                <div class="slider-container">
+                    <label for="repulsionStrengthSlider">Repulsion Strength:</label>
+                    <div class="range-slider">
+                        <input type="range" id="repulsionStrengthSlider" min="0" max="100" class="slider"
+                            data-output="repulsionStrengthOutput" data-scale-min="0.0001" data-scale-max="1000"
+                            data-scale-factor="1" data-precision="4" data-scale-type="log">
+                        <output id="repulsionStrengthOutput">1.0000</output>
+                        <div class="slider-min-max">
+                            <span class="slider-min">0.0001</span>
+                            <span class="slider-max">1000</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cooling Rate Slider -->
+                <div class="slider-container">
+                    <label for="coolingRateSlider">Cooling Rate:</label>
+                    <div class="range-slider">
+                        <input type="range" id="coolingRateSlider" min="0" max="100" value="10" class="slider"
+                            data-output="coolingRateOutput" data-scale-min="0" data-scale-max="1" data-scale-factor="1"
+                            data-precision="2" data-scale-type="linear">
+                        <output id="coolingRateOutput">0.10</output>
+                        <div class="slider-min-max">
+                            <span class="slider-min">0</span>
+                            <span class="slider-max">1</span>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div id="articles"></div>
             <div id="mainContentSpinner" class="spinner center-in-maincontent"></div>
@@ -38,8 +117,10 @@
         </template>
         <script src="https://d3js.org/d3.v6.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
-        <script type="module" src="/src/feeds.js"></script>
+        <script type="module" src="/src/Feeds/feeds.js"></script>
+        <script type="module" src="/src/forceSetting.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    </div>
 </body>
 
 </html>

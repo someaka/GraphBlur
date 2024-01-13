@@ -29,7 +29,7 @@ export const feedsLogger = new Logger(true);
 export const graphLogger = new Logger(true); 
 export const similLogger = new Logger(false); 
 export const serverLogger = new Logger(true); 
-export const clientLogger = new Logger(false); 
+export const clientLogger = new Logger(true); 
 export const similWorkerLogger = new Logger(false); 
 export const forceAtlasLogger = new Logger(false); 
 

@@ -1,10 +1,15 @@
-import { graphLogger as logger } from './logger.js';
+import { graphLogger as logger } from '../logger.js';
 
 logger.log('This is a log message from graph.js');
 
 
-import { visualizeGraph, clearGraph } from "./visualizeGraph.js"
-import { initializeGraphElements } from './ForceAtlas2/forceAtlas.js';
+import {
+    constructGraphData,
+    visualizeGraph,
+    clearGraph,
+    updateForceParameters,
+    updateForceAtlas2Settings 
+} from "./visualizeGraph.js";
 
 
 // Function to filter out edges below a certain percentile
@@ -18,37 +23,14 @@ function filterEdgesByPercentile(edges, percentile = 0.2) {
     return edges.filter(edge => edge.weight >= threshold);
 }
 
-export function constructGraphData(articles, width = 800, height = 600) {
-    // Create nodes for each article
-    const nodes = articles.map(article => ({
-        id: article.id,
-        title: article.title,
-        color: article.feedColor,
-    }));
 
-    // Initialize nodes and set default positions and velocities
-    initializeGraphElements(nodes, [], width, height);
-
-    // Now create links between all nodes (initially without weights)
-    const links = [];
-    for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-            const link = {
-                source: nodes[i], // Direct reference to the source node object
-                target: nodes[j], // Direct reference to the target node object
-                weight: 0.1 // Initialize with a default weight of 1
-            };
-            links.push(link);
-        }
-    }
-
-    return { nodes, links };
+function updateSimulationSettings(newSettings) {
+    updateForceAtlas2Settings(newSettings);
+    updateForceParameters(newSettings);
 }
 
 
-
-
-export async function updateGraphForSelectedFeeds(articlesCache, similarityMatrix = null) {
+async function updateGraphForSelectedFeeds(articlesCache, similarityMatrix = null) {
     logger.log('Articles cache:', articlesCache); // Log the entire articlesCache
 
     const selectedFeedsElements = document.querySelectorAll('#feedslist div.clicked');
@@ -121,4 +103,9 @@ function updateGraphEdgesWithSimilarityMatrix(graphData, similarityMatrix) {
             link.weight = 0;
         }
     });
+}
+
+export{
+    updateSimulationSettings,
+    updateGraphForSelectedFeeds
 }

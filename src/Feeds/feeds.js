@@ -1,4 +1,4 @@
-import { feedsLogger as logger } from './logger.js';
+import { feedsLogger as logger } from '../logger.js';
 
 // Use logger.log instead of logger.log
 logger.log('This is a log message from feeds.js');
@@ -12,8 +12,11 @@ const toggleButton = document.querySelector('#toggleButton');
 const selectAllButton = document.querySelector('#selectAllButton');
 // const mainContentSpinner = document.querySelector('#mainContentSpinner');
 
-import { updateGraphForSelectedFeeds } from './graph.js';
-import { updateFeedElementStyles } from './domUtils';
+import axios from 'axios';
+
+import { updateGraphForSelectedFeeds } from '../Graph/graph.js';
+import { updateFeedElementStyles } from '../domUtils';
+import { cookieJar, NEWSBLUR_URL } from '../server/auth.js'; // Import cookieJar from auth.js
 
 
 let isSameFeedClickedBool = false;
@@ -109,25 +112,36 @@ function cacheArticle(article) {
 
 async function fetchFeeds() {
     try {
-        const response = await fetch('/api/feeds');
+        const sessionCookie = localStorage.getItem('sessionid');
+        const headers = sessionCookie ? { 'Cookie': `sessionid=${sessionCookie}` } : {};
+        const response = await fetch('/api/feeds', {
+            method: 'GET',
+            headers: headers,
+            credentials: 'include' // This will include cookies with the request
+        });
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const data = await response.text(); // Get the response as text first
-
-        // logger.log('Response received:', data); // Log the raw response
+        const data = await response.text();
 
         try {
-            const json = JSON.parse(data); // Try to parse it as JSON
+            const json = JSON.parse(data);
             return json;
         } catch (e) {
             logger.error('Failed to parse JSON:', e);
-            return null; // Return null if JSON parsing fails
+            return null;
         }
     } catch (error) {
         logger.error('Failed to fetch feeds:', error);
-        return null; // Return null if the fetch request fails
+        return null;
     }
+}
+
+
+
+// Call this function if an authentication issue is detected
+function requireNewSession() {
+    localStorage.setItem('newSessionRequired', 'true');
 }
 
 
@@ -438,24 +452,55 @@ function unselectAllFeedsActions() {
 }
 
 
-window.onload = async () => {
+
+
+
+
+
+
+
+
+
+// Utility function to check if the cached data is still valid
+function isCachedDataValid(cachedData) {
+    const validityPeriod = 1; // articles won't display if we use the cache for some reason TODO gotta fix that
+    return cachedData && new Date().getTime() - cachedData.timestamp < validityPeriod;
+}
+
+// Function to initialize the feeds display
+async function initializeFeedsDisplay() {
     loadingElement.style.display = 'block';
     mainContentElement.style.right = '-40%';
 
-    let localFeedsData; // Declare a local variable to store feeds data
+    const cachedFeedsData = JSON.parse(localStorage.getItem('feedsData'));
+    let localFeedsData = cachedFeedsData && isCachedDataValid(cachedFeedsData) ? cachedFeedsData.feeds : null;
 
-    try {
-        localFeedsData = await fetchFeeds();
-        if (localFeedsData) {
-            await appendFeedsToDOM(localFeedsData);
-            selectAllButton.style.display = 'block'; // Show the "Select All" button
-            selectAllButton.onclick = () => toggleAllFeeds(localFeedsData); // Pass localFeedsData to toggleAllFeeds
-        } else {
-            throw new Error('No feeds data received');
+    if (!localFeedsData) {
+        try {
+            localFeedsData = await fetchFeeds();
+            if (localFeedsData) {
+                const feedsDataToCache = { feeds: localFeedsData, timestamp: new Date().getTime() };
+                localStorage.setItem('feedsData', JSON.stringify(feedsDataToCache));
+            } else {
+                throw new Error('No feeds data received');
+            }
+        } catch (error) {
+            logger.error('Failed to fetch feeds:', error);
         }
-    } catch (error) {
-        logger.error('Failed to fetch feeds:', error);
-    } finally {
-        loadingElement.style.display = 'none';
     }
-};
+
+    if (localFeedsData) {
+        await appendFeedsToDOM(localFeedsData);
+        selectAllButton.style.display = 'block';
+        selectAllButton.onclick = () => toggleAllFeeds(localFeedsData);
+    }
+
+    loadingElement.style.display = 'none';
+}
+
+
+
+
+
+// Execute the initialization function when the window loads
+window.onload = initializeFeedsDisplay;

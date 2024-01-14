@@ -4,10 +4,17 @@ import { appendFeedsToDOM } from './ui/FeedElements.js';
 import { toggleAllFeeds } from './ui/FeedEvents.js';
 import { feedsLogger as logger } from '../logger.js';
 import { fetchFeeds } from './data/FeedData.js';
+import { retractMainContent } from './data/FeedState.js';
 
 const loadingElement = document.querySelector('#loading');
 const mainContentElement = document.querySelector('#maincontent');
 const selectAllButton = document.querySelector('#selectAllButton');
+const toggleButton = document.querySelector('#toggleButton');
+
+toggleButton.onclick = async () => {
+    retractMainContent();
+};
+
 
 function isCachedDataValid(cachedData) {
     const validityPeriod = 1; // articles won't display if we use the cache for some reason TODO gotta fix that

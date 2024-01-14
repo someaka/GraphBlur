@@ -5,6 +5,27 @@ import { updateGraphForSelectedFeeds } from '../../Graph/graph.js';
 import { isCurrentDisplayedFeed, unselectCurrentFeed, expandMainContent, retractMainContent } from '../data/FeedState.js';
 import { articlesCache } from '../data/FeedCache.js';
 import { feedsLogger as logger } from '../../logger.js';
+import { updateFeedElementStyles } from '../../domUtils.js';
+import { clearGraph } from '../../Graph/visualizeGraph.js';
+
+async function selectAllFeedsActions(allFeeds, feedsData) {
+    for (const feedElement of allFeeds) {
+        const feedId = feedElement.id;
+        const feedData = feedsData[feedId];
+        if (!feedData || !Array.isArray(feedData.unreadStories)) {
+            logger.error(`Feed data for ID ${feedId} is missing unreadStories or is not an array.`);
+            continue;
+        }
+        await displayArticles(feedData);
+    }
+    updateGraphForSelectedFeeds(articlesCache);
+}
+
+function unselectAllFeedsActions() {
+    clearGraph();
+    retractMainContent();
+    articlesCache = {};
+}
 
 async function toggleAllFeeds(feedsData) {
     const allFeeds = document.querySelectorAll('#feedslist div');

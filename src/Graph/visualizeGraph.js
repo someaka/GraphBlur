@@ -37,60 +37,44 @@ function getGraphContainerDimensions(selector) {
 
 
 function initializeForceSimulation(graphData) {
-    const nodes = graphData.nodes;
-    const links = graphData.links;
+    sanitizeNodeData(graphData.nodes);
+    setupSimulation(graphData.nodes);
+}
+
+function sanitizeNodeData(nodes) {
     const width = currentForceAtlas2Settings.width;
     const height = currentForceAtlas2Settings.height;
-
-    // Sanitize node data
     nodes.forEach(node => {
-        if (isNaN(node.x) || isNaN(node.y)) {
-            node.x = width / 2;
-            node.y = height / 2;
-        }
-    });
-
-    simulation = d3.forceSimulation(nodes)
-        // .force('link',
-        //     d3.forceLink(links)
-        //         .id(d => d.id)
-        //         .distance(5)
-        //         .strength(1)
-        // )
-        // .force('charge',
-        //     d3.forceManyBody()
-        //         .strength(-1)
-        // )
-        .alphaMin(0.001)
-        .alphaTarget(0.3);
-    // .force('center', d3.forceCenter(width / 2, height / 2)); 
-
-    simulation.on('tick', () => {
-        try {
-            // Call forceAtlas2 to calculate the positions
-            forceAtlas2(simulation.alpha(), currentForceAtlas2Settings, nodes, links);
-
-            // Update the positions of the nodes in the D3 selection
-            graphGroup.selectAll('circle')
-                .attr('cx', d => isNaN(d.x) ? 0 : d.x)
-                .attr('cy', d => isNaN(d.y) ? 0 : d.y);
-
-            // Update the positions of the links if necessary
-            graphGroup.selectAll('line')
-                .attr('x1', d => isNaN(d.source.x) ? 0 : d.source.x)
-                .attr('y1', d => isNaN(d.source.y) ? 0 : d.source.y)
-                .attr('x2', d => isNaN(d.target.x) ? 0 : d.target.x)
-                .attr('y2', d => isNaN(d.target.y) ? 0 : d.target.y);
-
-            // Call any other update functions necessary for your visualization
-            updateVisualization(graphData);
-        } catch (error) {
-            logger.error('Simulation tick failed:', error);
-            simulation.stop(); // Stop the simulation in case of error
-        }
+        node.x = isNaN(node.x) ? width / 2 : node.x;
+        node.y = isNaN(node.y) ? height / 2 : node.y;
     });
 }
 
+function setupSimulation(nodes) {
+    simulation = d3.forceSimulation(nodes)
+        .alphaMin(0.001)
+        .alphaTarget(0.3)
+        .on('tick', ticked);
+
+    // Uncomment and configure these forces as needed
+    // simulation.force('link', d3.forceLink(links).id(d => d.id).distance(5).strength(1));
+    // simulation.force('charge', d3.forceManyBody().strength(-1));
+    // simulation.force('center', d3.forceCenter(width / 2, height / 2));
+}
+
+function ticked() {
+    if (!simulation) {
+        console.error("Simulation is null during ticked function.");
+        return;
+    }
+    try {
+        forceAtlas2(simulation.alpha(), currentForceAtlas2Settings, graphData.nodes, graphData.links);
+        updateVisualization(graphData);
+    } catch (error) {
+        logger.error('Simulation tick failed:', error);
+        stopSimulation();
+    }
+}
 
 
 
@@ -125,30 +109,43 @@ function constructGraphData(articles, dimensions = { width: DEFAULT_WIDTH, heigh
 
 
 
-
 function visualizeGraph(newGraphData, selector = '#graph-container') {
+    // Stop the existing simulation if it's running
+    stopSimulation();
+
     // Update the global graphData with the new data
     graphData = newGraphData;
     const { width, height } = getGraphContainerDimensions(selector);
-    let initialTransform = d3.zoomIdentity;
 
+    // Update the forceAtlas2 settings with the new dimensions
     updateForceAtlas2Settings({ width, height });
-    setupSVGContainer(selector, width, height);
-    defineZoomBehavior(initialTransform);
-    initializeForceSimulation(graphData);
-    createVisualElements(graphData);
-    applyDragBehavior(simulation);
 
+    // Setup the SVG container and define zoom behavior
+    setupSVGContainer(selector, width, height);
+    defineZoomBehavior(d3.zoomIdentity);
+
+    // Initialize the force simulation with the new graph data
+    initializeForceSimulation(graphData);
+
+    // Create visual elements (nodes, links, etc.)
+    createVisualElements(graphData);
+
+    // Reapply the drag behavior to the new nodes
+    applyDragBehavior(simulation);
 }
 
 
-function clearGraph() {
-    // Stop the simulation if it's running
+function stopSimulation() {
     if (simulation) {
-        simulation.stop();
-        simulation = null; // Clear the reference to the simulation
+        simulation.on('tick', null); // Remove tick event
+        simulation.stop(); // Stop the simulation
+        simulation = null; // Set simulation to null to prevent future errors
     }
+}
 
+function clearGraph() {
+    stopSimulation();
+    
     // Clear the contents of the SVG element without removing it
     if (graphGroup) {
         graphGroup.selectAll('*').remove();

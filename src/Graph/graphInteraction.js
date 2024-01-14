@@ -1,9 +1,9 @@
 import * as d3 from 'd3';
-import { 
-    graphGroup, 
+import {
+    graphGroup,
     defsContainer,
-    setGraphGroup, 
-    setDefsContainer 
+    setGraphGroup,
+    setDefsContainer
 } from './visualizeGraph';
 
 let svgContainer
@@ -67,8 +67,8 @@ function applyDragBehavior(simulation) {
             d.fx = null;
             d.fy = null;
         });
-
-    graphGroup.selectAll('circle').call(drag);
+    // Apply the drag behavior to all nodes
+    graphGroup.selectAll('circle').data(simulation.nodes()).call(drag);
 }
 
 export { defineZoomBehavior, applyDragBehavior, setupSVGContainer };

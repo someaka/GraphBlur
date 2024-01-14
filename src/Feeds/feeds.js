@@ -15,6 +15,7 @@ const selectAllButton = document.querySelector('#selectAllButton');
 import axios from 'axios';
 
 import { updateGraphForSelectedFeeds } from '../Graph/graph.js';
+import { clearGraph } from '../Graph/visualizeGraph.js';
 import { updateFeedElementStyles } from '../domUtils';
 import { cookieJar, NEWSBLUR_URL } from '../server/auth.js'; // Import cookieJar from auth.js
 

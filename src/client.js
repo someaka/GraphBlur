@@ -1,4 +1,5 @@
-// Define UI elements
+import { clientLogger as logger } from './logger.js';
+
 const formLogin = document.getElementById("formLogin");
 const submitButton = document.getElementById("submitButton");
 const inputUsername = document.getElementById("inputUsername");

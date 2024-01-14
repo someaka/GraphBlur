@@ -1,10 +1,5 @@
 import * as d3 from 'd3';
-import { 
-    graphGroup, 
-    defsContainer,
-    setGraphGroup, 
-    setDefsContainer 
-} from './visualizeGraph';
+import { graphGroup, defsContainer } from './visualizeGraph';
 
 function createNodes(graphData) {
     const nodes = graphGroup.selectAll('circle')
@@ -43,7 +38,7 @@ function createLinkGradients(graphData, defsContainer) {
         .attr('y1', d => d.source.y)
         .attr('x2', d => d.target.x)
         .attr('y2', d => d.target.y)
-        .each(function(d) {
+        .each(function (d) {
             const gradient = d3.select(this);
             gradient.append('stop')
                 .attr('offset', '0%')

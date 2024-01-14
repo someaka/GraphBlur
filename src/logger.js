@@ -26,7 +26,7 @@ class Logger {
 
 // Export an instance of Logger for each file with logging enabled or disabled
 export const serverLogger = new Logger(true); 
-export const clientLogger = new Logger(false); 
+export const clientLogger = new Logger(true); 
 export const feedsLogger = new Logger(true); 
 export const similLogger = new Logger(false); 
 export const similWorkerLogger = new Logger(false); 

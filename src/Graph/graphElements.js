@@ -52,11 +52,9 @@ function createLinkGradients(graphData, defsContainer) {
 }
 
 function createVisualElements(graphData) {
-    createNodes(graphData);
     createLinks(graphData);
-    createLinkGradients(graphData, defsContainer); // Call the helper function to create gradients
-
-    // Call any additional functions for creating other visual elements like labels or markers
+    createNodes(graphData);
+    createLinkGradients(graphData, defsContainer);
 }
 
 

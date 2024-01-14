@@ -175,3 +175,8 @@
     transform: translateX(-50%);
     font-size: small;
 }
+
+.slider-explanation {
+    font-size: smaller;
+    color: #999; /* Lighter shade of grey */
+}

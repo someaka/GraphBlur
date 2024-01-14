@@ -30,17 +30,20 @@
             </div>
             <div id="articles"></div>
             <div id="forceSettings" style="display: none;">
+
                 <!-- Gravity Slider -->
                 <div class="slider-container">
                     <label for="gravitySlider">Gravity:</label>
+                    <small class="slider-explanation">Higher gravity pulls nodes closer to center, lower lets them drift
+                        apart.</small>
                     <div class="range-slider">
                         <input type="range" id="gravitySlider" min="0" max="100" value="50" class="slider"
-                            data-output="gravityOutput" data-scale-min="0.000001" data-scale-max="100"
+                            data-output="gravityOutput" data-scale-min="0.0000001" data-scale-max="10000"
                             data-scale-factor="1" data-precision="6" data-scale-type="log">
                         <output id="gravityOutput">1</output>
                         <div class="slider-min-max">
-                            <span class="slider-min">0.000001</span>
-                            <span class="slider-max">100</span> <!-- Updated display -->
+                            <span class="slider-min">0.0000001</span>
+                            <span class="slider-max">10000</span>
                         </div>
                     </div>
                 </div>
@@ -48,6 +51,8 @@
                 <!-- Scaling Ratio Slider -->
                 <div class="slider-container">
                     <label for="scalingRatioSlider">Scaling Ratio:</label>
+                    <small class="slider-explanation">Higher scaling increases repulsion for well-connected nodes, lower
+                        reduces it.</small>
                     <div class="range-slider">
                         <input type="range" id="scalingRatioSlider" min="0" max="100" value="20" class="slider"
                             data-output="scalingRatioOutput" data-scale-min="0" data-scale-max="2" data-scale-factor="1"
@@ -63,6 +68,8 @@
                 <!-- Barnes Hut Theta Slider -->
                 <div class="slider-container">
                     <label for="barnesHutThetaSlider">Barnes Hut Theta:</label>
+                    <small class="slider-explanation">Higher theta speeds up simulation with less accuracy, lower theta
+                        is more precise but slower.</small>
                     <div class="range-slider">
                         <input type="range" id="barnesHutThetaSlider" min="0" max="100" value="60" class="slider"
                             data-output="barnesHutThetaOutput" data-scale-min="0" data-scale-max="2"
@@ -77,15 +84,17 @@
 
                 <!-- Repulsion Strength Slider -->
                 <div class="slider-container">
-                    <label for="repulsionStrengthSlider">Repulsion Strength:</label>
                     <div class="range-slider">
+                        <label for="repulsionStrengthSlider">Repulsion Strength:</label>
+                        <small class="slider-explanation">Higher strength spreads nodes further apart, lower brings them
+                            closer.</small>
                         <input type="range" id="repulsionStrengthSlider" min="0" max="100" class="slider"
-                            data-output="repulsionStrengthOutput" data-scale-min="0.0001" data-scale-max="5000"
+                            data-output="repulsionStrengthOutput" data-scale-min="0.0001" data-scale-max="10000"
                             data-scale-factor="1" data-precision="4" data-scale-type="log">
                         <output id="repulsionStrengthOutput">1.0000</output>
                         <div class="slider-min-max">
                             <span class="slider-min">0.0001</span>
-                            <span class="slider-max">5000</span>
+                            <span class="slider-max">10000</span>
                         </div>
                     </div>
                 </div>
@@ -93,6 +102,8 @@
                 <!-- Cooling Rate Slider -->
                 <div class="slider-container">
                     <label for="coolingRateSlider">Cooling Rate:</label>
+                    <small class="slider-explanation">Higher cooling slows down movement quickly, lower cooling allows
+                        longer simulation.</small>
                     <div class="range-slider">
                         <input type="range" id="coolingRateSlider" min="0" max="100" value="10" class="slider"
                             data-output="coolingRateOutput" data-scale-min="0" data-scale-max="1" data-scale-factor="1"
@@ -104,6 +115,7 @@
                         </div>
                     </div>
                 </div>
+
             </div>
             <div id="articles"></div>
             <div id="mainContentSpinner" class="spinner center-in-maincontent"></div>

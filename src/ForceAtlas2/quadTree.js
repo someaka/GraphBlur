@@ -1,4 +1,4 @@
-import { forceAtlasLogger as logger } from '../logger.js';
+import { quadTreeLogger as logger } from '../logger.js';
 
 
 class QuadTree {

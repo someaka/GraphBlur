@@ -42,9 +42,9 @@ async function updateGraphForSelectedFeeds(articlesCache, similarityMatrix = nul
             // Map over articles, keeping failed fetches with empty fields
             const articlesWithFallbacks = articlesCache[feedId].map(article => ({
                 id: article.id || '', // Use the UUID as the article ID or an empty string
-                title: article.article.title || '',
+                title: article.article && article.article.title ? article.article.title : '',
                 feedColor: article.feedColor || '',
-                content: article.article.text || ''
+                content: article.article && article.article.text ? article.article.text : ''
             }));
             allArticles = allArticles.concat(articlesWithFallbacks);
         }

@@ -37,16 +37,16 @@ function initializeGraphElements(nodes, links, width = 800, height = 600) {
 
     // Initialize node properties with slight randomization to avoid zero distance
     nodes.forEach(node => {
-        node.x = typeof node.x === 'number' && !isNaN(node.x) ? node.x : defaultX +(Math.random() - 0.5) * 10;
-        node.y = typeof node.y === 'number' && !isNaN(node.y) ? node.y : defaultY +(Math.random() - 0.5) * 10;
+        node.x = typeof node.x === 'number' && !isNaN(node.x) ? node.x : defaultX + (Math.random() - 0.5) * 10;
+        node.y = typeof node.y === 'number' && !isNaN(node.y) ? node.y : defaultY + (Math.random() - 0.5) * 10;
         node.vx = typeof node.vx === 'number' && !isNaN(node.vx) ? node.vx : defaultVx;
         node.vy = typeof node.vy === 'number' && !isNaN(node.vy) ? node.vy : defaultVy;
     });
 
-    // Log the node properties to confirm they are set correctly
-    nodes.forEach(node => {
-        logger.log(`Node initialized: ${JSON.stringify(node)}`);
-    });
+    // // Log the node properties to confirm they are set correctly
+    // nodes.forEach(node => {
+    //     logger.log(`Node initialized: ${JSON.stringify(node)}`);
+    // });
 
     // Default initialization value for link weights
     const defaultWeight = 1;
@@ -90,14 +90,14 @@ function verifyForceAtlas2Parameters(nodes, edges) {
 
 
 function forceAtlas2(alpha, customSettings, nodes, edges) {
-    logger.log("Edges received in forceAtlas2:", edges);
-    logger.log("Applying forceAtlas2 with settings:", JSON.stringify(customSettings));
+    //logger.log("Edges received in forceAtlas2:", edges);
+    //logger.log("Applying forceAtlas2 with settings:", JSON.stringify(customSettings));
 
     // Calculate degrees for nodes based on link weights
     calculateDegrees(nodes, edges);
     // Initialize node properties and link weights
     initializeGraphElements(nodes, edges, customSettings.width, customSettings.height);
-    logger.log("Nodes and edges initialized", JSON.stringify(nodes), JSON.stringify(edges));
+    //logger.log("Nodes and edges initialized", JSON.stringify(nodes), JSON.stringify(edges));
     // Verify parameters before proceeding
     verifyForceAtlas2Parameters(nodes, edges);
     // Merge custom settings with default settings
@@ -153,7 +153,7 @@ function forceAtlas2(alpha, customSettings, nodes, edges) {
         node.vy += repulsion.forceY * (dissuadeHubs ? degreeFactor : 1);
 
         // Log the values after applying repulsion
-        logger.log(`Values after repulsion for node ${node.id}:`, `x: ${node.x}, y: ${node.y}, vx: ${node.vx}, vy: ${node.vy}`);
+        // logger.log(`Values after repulsion for node ${node.id}:`, `x: ${node.x}, y: ${node.y}, vx: ${node.vx}, vy: ${node.vy}`);
 
         // Prevent overlapping (if enabled)
         if (preventOverlap) {
@@ -166,7 +166,7 @@ function forceAtlas2(alpha, customSettings, nodes, edges) {
 
 
         // Log the values after updating velocity and position
-        logger.log(`Values after update for node ${node.id}:`, `x: ${node.x}, y: ${node.y}, vx: ${node.vx}, vy: ${node.vy}`);
+        // logger.log(`Values after update for node ${node.id}:`, `x: ${node.x}, y: ${node.y}, vx: ${node.vx}, vy: ${node.vy}`);
     }
 
     // Update the cooling factor dynamically for the next iteration

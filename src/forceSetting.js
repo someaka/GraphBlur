@@ -1,4 +1,4 @@
-import { updateSimulationSettings } from "./Graph/graph";
+import { updateSimulationSettings, setNegativeEdges } from "./Graph/graph";
 
 
 
@@ -88,4 +88,16 @@ function initializeSliders() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', initializeSliders);
+function initializeOptions() {
+    const negativeEdgesToggle = document.getElementById('negativeEdgesToggle');
+    negativeEdgesToggle.checked = true;
+    negativeEdgesToggle.addEventListener('change', function () {
+        // Call the setter function with the new checkbox value
+        setNegativeEdges(negativeEdgesToggle.checked);
+    });
+
+    // Initialize the sliders and other settings
+    initializeSliders();
+}
+
+document.addEventListener('DOMContentLoaded', initializeOptions);

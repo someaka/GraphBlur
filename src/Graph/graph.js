@@ -7,8 +7,19 @@ import {
     constructGraphData,
     visualizeGraph,
     clearGraph,
-    updateForceAtlas2Settings 
+    updateForceAtlas2Settings
 } from "./visualizeGraph.js";
+
+
+let articlesCache, similarityMatrix;
+let negativeEdges = true; // Assuming this is the default value
+
+// Setter function for negativeEdges
+function setNegativeEdges(value) {
+    negativeEdges = value;
+    logger.log('Negative edges set to:', negativeEdges);
+    updateGraphForSelectedFeeds();
+}
 
 
 // Function to filter out edges below a certain percentile
@@ -24,11 +35,14 @@ function filterEdgesByPercentile(edges, percentile = 0.2) {
 
 
 function updateSimulationSettings(newSettings) {
-    logger.log('Updating simulation settings with:', newSettings);
+    // logger.log('Updating simulation settings with:', newSettings);
     updateForceAtlas2Settings(newSettings);
 }
 
-async function updateGraphForSelectedFeeds(articlesCache, similarityMatrix = null) {
+async function updateGraphForSelectedFeeds(newArticlesCache = null, newSimilarityMatrix = null) {
+    articlesCache = newArticlesCache ? newArticlesCache : articlesCache;
+    similarityMatrix = newSimilarityMatrix ? newSimilarityMatrix : similarityMatrix;
+
     logger.log('Articles cache:', articlesCache); // Log the entire articlesCache
 
     const selectedFeedsElements = document.querySelectorAll('#feedslist div.clicked');
@@ -57,22 +71,25 @@ async function updateGraphForSelectedFeeds(articlesCache, similarityMatrix = nul
         const graphData = constructGraphData(allArticles);
         logger.log('Graph dataa:', graphData);
 
+
+
         // If a similarity matrix is provided, update the weights of the edges
         if (similarityMatrix) {
-            logger.log('Graph data before similarity matrix:', graphData); // Log the graphData
-            updateGraphEdgesWithSimilarityMatrix(graphData, similarityMatrix);
-            // Log the graphData.links after they've been potentially updated with the similarity matrix
-            logger.log('Graph data after similarity matrix:', graphData);
-            //logger.log('Links:', JSON.stringify(graphData.links));
+            logger.log("negative edges: ", negativeEdges);
 
-            // Filter out the weakest edges based on the percentile
-            const filteredLinks = filterEdgesByPercentile(graphData.links);
-            //logger.log('Filtered Links:', JSON.stringify(filteredLinks));
+            // Extract weights from graphData.links before update and log them
+            const weightsBeforeUpdate = graphData.links.map(link => ({ source: link.source.id, target: link.target.id, weight: link.weight }));
+            logger.log('Graph data before similarity matrix update:');
+            logger.table(weightsBeforeUpdate);
 
-            // Update graphData with the filtered links
-            graphData.links = filteredLinks;
+            updateGraphEdgesWithSimilarityMatrix(graphData, similarityMatrix, !negativeEdges);
+            graphData.links = negativeEdges ? graphData.links : filterEdgesByPercentile(graphData.links, 0.5);
 
-            logger.log("links and filtered links are equal?", JSON.stringify(graphData.links) === JSON.stringify(filteredLinks));
+            // Extract weights from graphData.links after update and log them
+            const weightsAfterUpdate = graphData.links.map(link => ({ source: link.source.id, target: link.target.id, weight: link.weight }));
+            logger.log('Graph data after similarity matrix update:');
+            logger.table(weightsAfterUpdate);            
+            
         }
 
         logger.log('Graph dataB:', graphData);
@@ -82,8 +99,12 @@ async function updateGraphForSelectedFeeds(articlesCache, similarityMatrix = nul
     }
 }
 
+function normalizeEdgeWeight(edgeWeight) {
+    // Normalize edge weights from [-1, 1] to [0, 1]
+    return (edgeWeight + 1) / 2;
+}
 
-function updateGraphEdgesWithSimilarityMatrix(graphData, similarityMatrix) {
+function updateGraphEdgesWithSimilarityMatrix(graphData, similarityMatrix, normalize = true) {
     // Create a map from node IDs to their indices
     const idToIndexMap = new Map(graphData.nodes.map((node, index) => [node.id, index]));
 
@@ -95,7 +116,10 @@ function updateGraphEdgesWithSimilarityMatrix(graphData, similarityMatrix) {
         if (sourceIndex !== undefined && targetIndex !== undefined &&
             similarityMatrix[sourceIndex] && similarityMatrix[targetIndex] &&
             typeof similarityMatrix[sourceIndex][targetIndex] === 'number') {
-            link.weight = similarityMatrix[sourceIndex][targetIndex];
+
+            const edgeWeight = similarityMatrix[sourceIndex][targetIndex];
+            link.weight = normalize ? normalizeEdgeWeight(edgeWeight) : edgeWeight;
+
         } else {
             // Set a default weight of 0 for invalid links
             link.weight = 0;
@@ -103,7 +127,8 @@ function updateGraphEdgesWithSimilarityMatrix(graphData, similarityMatrix) {
     });
 }
 
-export{
+export {
     updateSimulationSettings,
-    updateGraphForSelectedFeeds
+    updateGraphForSelectedFeeds,
+    setNegativeEdges
 }

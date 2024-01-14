@@ -97,7 +97,7 @@ function forceAtlas2(alpha, customSettings, nodes, edges) {
     calculateDegrees(nodes, edges);
     // Initialize node properties and link weights
     initializeGraphElements(nodes, edges, customSettings.width, customSettings.height);
-    //logger.log("Nodes and edges initialized", JSON.stringify(nodes), JSON.stringify(edges));
+    logger.log("Nodes and edges initialized", JSON.stringify(nodes), JSON.stringify(edges));
     // Verify parameters before proceeding
     verifyForceAtlas2Parameters(nodes, edges);
     // Merge custom settings with default settings

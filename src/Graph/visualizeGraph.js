@@ -162,7 +162,7 @@ function updateForceAtlas2Settings(newParams, settings = currentForceAtlas2Setti
         ...settings,
         ...newParams
     };
-    logger.log("Force parameters updated with:", JSON.stringify(currentForceAtlas2Settings));
+    // logger.log("Force parameters updated with:", JSON.stringify(currentForceAtlas2Settings));
 
     if (simulation) {
         // Use the currentForceAtlas2Settings to update the simulation

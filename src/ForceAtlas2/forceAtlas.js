@@ -3,13 +3,13 @@ import { forceAtlasLogger as logger } from '../logger.js';
 import { buildQuadTree } from './quadTree.js';
 
 const defaultSettings = {
-    gravity: 0.001,
-    scalingRatio: 2.0,
+    gravity: 1,
+    scalingRatio: 1.0,
     edgeWeightInfluence: 1,
     dissuadeHubs: false,
     preventOverlap: true,
     barnesHutTheta: 1.2,
-    repulsionStrength: 0.1,
+    repulsionStrength: 1,
     coolingRate: 0.1,
     width: 800, // Default layout width
     height: 600, // Default layout height

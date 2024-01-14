@@ -12,7 +12,7 @@ import {
 
 
 let articlesCache, similarityMatrix;
-let negativeEdges = true; // Assuming this is the default value
+let negativeEdges = false; // Assuming this is the default value
 
 // Setter function for negativeEdges
 function setNegativeEdges(value) {
@@ -130,5 +130,6 @@ function updateGraphEdgesWithSimilarityMatrix(graphData, similarityMatrix, norma
 export {
     updateSimulationSettings,
     updateGraphForSelectedFeeds,
-    setNegativeEdges
+    setNegativeEdges,
+    negativeEdges
 }

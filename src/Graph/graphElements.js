@@ -9,6 +9,9 @@ function createNodes(graphData) {
         .attr('r', 5)
         .attr('fill', d => d.color);
 
+    // Append a title element to each node for the hover text
+    nodes.append('title')
+        .text(d => d.title);
     // Add any additional node attributes or event listeners here
 }
 

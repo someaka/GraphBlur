@@ -1,4 +1,4 @@
-import { updateSimulationSettings, setNegativeEdges } from "./Graph/graph";
+import { updateSimulationSettings, setNegativeEdges, negativeEdges } from "./Graph/graph";
 
 
 
@@ -90,7 +90,7 @@ function initializeSliders() {
 
 function initializeOptions() {
     const negativeEdgesToggle = document.getElementById('negativeEdgesToggle');
-    negativeEdgesToggle.checked = true;
+    negativeEdgesToggle.checked = negativeEdges;
     negativeEdgesToggle.addEventListener('change', function () {
         // Call the setter function with the new checkbox value
         setNegativeEdges(negativeEdgesToggle.checked);

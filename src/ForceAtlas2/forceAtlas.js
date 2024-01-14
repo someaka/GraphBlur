@@ -206,7 +206,7 @@ function applyAttraction(nodes, edges, edgeWeightInfluence, k) {
         const distance = Math.sqrt(xDistance * xDistance + yDistance * yDistance);
 
         // Calculate the attraction force with edge weight influence
-        const attractionForce = (distance * distance) / (k * Math.pow(weight, edgeWeightInfluence));
+        const attractionForce = (distance * distance) / (k-k * Math.pow(weight, edgeWeightInfluence));
 
         if (distance > 0) {
             source.vx += (xDistance / distance) * attractionForce;

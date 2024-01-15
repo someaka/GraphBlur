@@ -13,9 +13,13 @@ async function fetchFeeds() {
             headers: headers,
             credentials: 'include' // This will include cookies with the request
         });
+        
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            // Handle other HTTP errors
+            logger.error('HTTP error when fetching feeds:', response.status);
+            return null;
         }
+
         const data = await response.text();
 
         try {

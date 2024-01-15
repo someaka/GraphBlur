@@ -61,3 +61,15 @@ formLogin.addEventListener("submit", handleLogin);
     loginStatusMessage.style.display = 'none';
   });
 });
+
+
+// export {
+//   handleLogin,
+//   displayLoginError,
+//   resetSubmitButton,
+//   loginStatusMessage,
+//   formLogin,
+//   submitButton,
+//   inputUsername,
+//   inputPassword
+// }

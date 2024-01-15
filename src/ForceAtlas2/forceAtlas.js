@@ -6,7 +6,7 @@ const defaultSettings = {
     gravity: 1,
     scalingRatio: 1.0,
     edgeWeightInfluence: 1,
-    dissuadeHubs: false,
+    dissuadeHubs: true,
     preventOverlap: true,
     barnesHutTheta: 1.2,
     repulsionStrength: 1,
@@ -207,6 +207,8 @@ function applyAttraction(nodes, edges, edgeWeightInfluence, k) {
 
         // Calculate the attraction force with edge weight influence
         const attractionForce = (distance * distance) / (k-k * Math.pow(weight, edgeWeightInfluence));
+        // const clippedAttraction = Math.min(attractionForce, 1);
+        // attractionForce = clippedAttraction * (1 - clippedAttraction);
 
         if (distance > 0) {
             source.vx += (xDistance / distance) * attractionForce;

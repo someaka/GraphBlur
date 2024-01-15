@@ -32,18 +32,8 @@ async function saveSessionCookie(sessionCookie) {
 }
 
 async function fetchWithSessionCookie(url, options = {}) {
-    if (!isSessionValid) {
-        const reAuthResult = await reAuthenticate();
-        if (reAuthResult.authenticated) {
-            await saveSessionCookie(reAuthResult.sessionCookie);
-            isSessionValid = true;
-        } else {
-            throw new Error('Re-authentication failed.');
-        }
-    }
-
-    const sessionCookie = await loadSessionCookie();
     try {
+        const sessionCookie = await loadSessionCookie();
         const response = await axios.get(url, {
             headers: {
                 'Content-Type': 'application/json',
@@ -54,9 +44,9 @@ async function fetchWithSessionCookie(url, options = {}) {
         });
         return response.data;
     } catch (error) {
-        if (error.response && error.response.status === 403) {
+        if (!isSessionValid || (error.response && error.response.status === 403)) {
             isSessionValid = false;
-            throw new Error('Session is invalid. Re-authentication required.');
+            throw { response: { status: 401 } }; // Simulate an axios error with a 401 status
         } else {
             throw error;
         }

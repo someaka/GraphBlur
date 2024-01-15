@@ -1,6 +1,7 @@
 {
   "ignore": [
     "src/server/temp_session_store.json",
-    "src/ForceAtlas2/log.txt"
+    "src/ForceAtlas2/log.txt",
+    "cypress/*"
   ]
 }

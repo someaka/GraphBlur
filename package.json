@@ -5,6 +5,7 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
+    "start": "npm-run-all --parallel start:vite start:server",
     "start:vite": "vite",
     "start:server": "nodemon src/server/server.js",
     "cy:open": "cypress open",

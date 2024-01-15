@@ -5,6 +5,8 @@ on:
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
+    env:
+      VITE_HUGGINGFACE_TOKEN: ${{ secrets.VITE_HUGGINGFACE_TOKEN }}
     strategy:
       fail-fast: false
       matrix:

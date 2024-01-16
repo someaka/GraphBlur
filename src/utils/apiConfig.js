@@ -1,7 +1,5 @@
-// src/utils/apiConfig.js
-
 export function getApiBaseUrl() {
-  if (process.env.NODE_ENV === 'production' || Cypress.env('NODE_ENV') === 'production') {
+  if (process.env.NODE_ENV === 'production' || (typeof Cypress !== 'undefined' && Cypress.env('NODE_ENV') === 'production')) {
     // In production, use the server's base URL without the /api prefix
     return '';
   } else {

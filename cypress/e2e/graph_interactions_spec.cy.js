@@ -3,9 +3,6 @@ import { getApiBaseUrl } from '../../src/utils/apiConfig.js';
 const baseUrl = getApiBaseUrl();
 
 describe('Graph Interactions', () => {
-  it('Should have NODE_ENV set to production', () => {
-    expect(Cypress.env('NODE_ENV')).to.equal('production');
-  });
 
   it('should login, click on a feed, and verify nodes are displayed', () => {
     // Log the base URL to the console

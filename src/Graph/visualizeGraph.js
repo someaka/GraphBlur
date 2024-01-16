@@ -64,7 +64,7 @@ function setupSimulation(nodes) {
 
 function ticked() {
     if (!simulation) {
-        console.error("Simulation is null during ticked function.");
+        logger.error("Simulation is null during ticked function.");
         return;
     }
     try {

@@ -7,20 +7,23 @@ import { reAuthenticate } from './auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const SESSION_STORE_PATH = path.join(__dirname, 'temp_session_store.json');
+const SESSION_STORE_PATH = path.join(process.cwd(), 'temp_session_store.json');
 const NEWSBLUR_URL = 'https://www.newsblur.com';
 
 let isSessionValid = true;
 
 async function loadSessionCookie() {
     try {
+        if (!fs.existsSync(SESSION_STORE_PATH)) {
+            fs.writeFileSync(SESSION_STORE_PATH, JSON.stringify({ sessionCookie: null }));
+        }
         const data = await fs.promises.readFile(SESSION_STORE_PATH, 'utf8');
         return JSON.parse(data).sessionCookie;
     } catch (error) {
         logger.error('Error loading session cookie:', error);
         throw new Error('Failed to load session cookie.');
     }
-}
+ }
 
 async function saveSessionCookie(sessionCookie) {
     try {
@@ -32,6 +35,7 @@ async function saveSessionCookie(sessionCookie) {
 }
 
 async function fetchWithSessionCookie(url, options = {}) {
+    // logger.log("fetching url: ",url)
     try {
         const sessionCookie = await loadSessionCookie();
         const response = await axios.get(url, {
@@ -42,6 +46,7 @@ async function fetchWithSessionCookie(url, options = {}) {
             withCredentials: true,
             ...options
         });
+        // logger.log("response: ",response.data)
         return response.data;
     } catch (error) {
         if (!isSessionValid || (error.response && error.response.status === 403)) {
@@ -86,4 +91,4 @@ async function fetchStories(feedId, options = {}) {
     return allUnreadStories;
 }
 
-export { fetchFeeds, fetchStories };
+export { fetchFeeds, fetchStories, saveSessionCookie, loadSessionCookie };

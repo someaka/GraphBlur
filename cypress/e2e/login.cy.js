@@ -1,8 +1,13 @@
+// cypress/e2e/login.cy.js
+import { getApiBaseUrl } from '../../src/utils/apiConfig.js';
+
+const baseUrl = getApiBaseUrl();
+
 describe('Login Tests', () => {
   it('successfully logs in and redirects to the feeds page', () => {
 
     // Intercept the login request to check the response headers later
-    cy.intercept('POST', '/api/login').as('loginRequest');
+    cy.intercept('POST', `${baseUrl}/login`).as('loginRequest');
 
     // Visit the login page
     cy.visit('/');
@@ -56,7 +61,7 @@ describe('Login Tests', () => {
 
   it('persists the user session across page navigation and reloads', () => {
     // Perform a login to set the session cookie
-    cy.request('POST', '/api/login', { username: 'curaSed', password: '010203' })
+    cy.request('POST',  `${baseUrl}/login`, { username: 'curaSed', password: '010203' })
       .its('body')
       .then((body) => {
         expect(body).to.have.property('sessionCookie');

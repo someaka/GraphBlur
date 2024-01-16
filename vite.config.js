@@ -8,8 +8,10 @@ export default defineConfig({
     outDir: path.resolve(__dirname, 'dist'),
     emptyOutDir: true,
     rollupOptions: {
-      // 'index.html' should be at the project root
-      input: path.resolve(__dirname, 'index.html'),
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        feeds: path.resolve(__dirname, 'feeds.html'),
+      },
     },
   },
   server: {

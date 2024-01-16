@@ -3,7 +3,7 @@ on:
   push:
   workflow_dispatch:
 jobs:
-  cypress-run:
+  cypress-run-dev:
     runs-on: ubuntu-latest
     env:
       VITE_HUGGINGFACE_TOKEN: ${{ secrets.VITE_HUGGINGFACE_TOKEN }}
@@ -21,13 +21,38 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Cypress run
+      - name: Cypress run on dev
         uses: cypress-io/github-action@v6
         with:
-          start: npm start
+          start: npm run start:dev
           wait-on: 'http://localhost:3000'
           record: true
           parallel: true
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  cypress-run-prod:
+    # needs: cypress-run-dev
+    runs-on: ubuntu-latest
+    env:
+      VITE_HUGGINGFACE_TOKEN: ${{ secrets.VITE_HUGGINGFACE_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        containers: [1, 2]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Clear npm cache
+        run: npm cache clean --force
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Cypress run on prod
+        run: npm run test:prod
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

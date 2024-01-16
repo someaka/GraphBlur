@@ -19,4 +19,12 @@ function cacheArticle(article) {
     }
 }
 
-export { articlesCache, cacheArticle };
+function clearCache() {
+    articlesCache = {};
+}
+
+export {
+    articlesCache,
+    cacheArticle,
+    clearCache
+};

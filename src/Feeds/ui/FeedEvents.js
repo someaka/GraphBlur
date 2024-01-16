@@ -3,7 +3,7 @@
 import { toggleFeedElement, displayArticles } from './FeedUI.js';
 import { updateGraphForSelectedFeeds } from '../../Graph/graph.js';
 import { isCurrentDisplayedFeed, unselectCurrentFeed, expandMainContent, retractMainContent } from '../data/FeedState.js';
-import { articlesCache } from '../data/FeedCache.js';
+import { clearCache, articlesCache } from '../data/FeedCache.js';
 import { feedsLogger as logger } from '../../logger.js';
 import { updateFeedElementStyles } from '../../domUtils.js';
 import { clearGraph } from '../../Graph/visualizeGraph.js';
@@ -24,7 +24,7 @@ async function selectAllFeedsActions(allFeeds, feedsData) {
 function unselectAllFeedsActions() {
     clearGraph();
     retractMainContent();
-    articlesCache = {};
+    clearCache();
 }
 
 async function toggleAllFeeds(feedsData) {

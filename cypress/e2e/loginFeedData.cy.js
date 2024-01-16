@@ -1,9 +1,13 @@
+import { getApiBaseUrl } from '../../src/utils/apiConfig.js';
+
+const baseUrl = getApiBaseUrl();
+
 describe('Login and Feeds Functionality', () => {
   let sessionCookie = null;
 
   before(() => {
     // Perform a login to set the session cookie
-    cy.request('POST', '/api/login', { username: 'curaSed', password: '010203' })
+    cy.request('POST',  `${baseUrl}/login`, { username: 'curaSed', password: '010203' })
       .its('body')
       .then((body) => {
         expect(body).to.have.property('sessionCookie');

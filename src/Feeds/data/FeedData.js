@@ -3,17 +3,21 @@
 import axios from 'axios';
 import { feedsLogger as logger } from '../../logger.js';
 import { articlesCache } from './FeedCache.js';
+import { getApiBaseUrl } from '../../utils/apiConfig.js';
+
+const baseUrl = getApiBaseUrl();
 
 async function fetchFeeds() {
     try {
         const sessionCookie = localStorage.getItem('sessionid');
         const headers = sessionCookie ? { 'Cookie': `sessionid=${sessionCookie}` } : {};
-        const response = await fetch('/api/feeds', {
+        // logger.log("baseUrl", baseUrl)
+        const response = await fetch(`${baseUrl}/feeds`, {
             method: 'GET',
             headers: headers,
             credentials: 'include' // This will include cookies with the request
         });
-        
+
         if (!response.ok) {
             // Handle other HTTP errors
             logger.error('HTTP error when fetching feeds:', response.status);
@@ -21,6 +25,7 @@ async function fetchFeeds() {
         }
 
         const data = await response.text();
+        // logger.log("data", data)
 
         try {
             const json = JSON.parse(data);
@@ -46,7 +51,7 @@ async function fetchHtmlResults(feedId) {
     const selectedFeedIds = Array.from(selectedFeedElements).map(feedEl => feedEl.id);
 
     try {
-        const response = await axios.post('/api/fetch-articles', {
+        const response = await axios.post(`${baseUrl}/fetch-articles`, {
             feedId,
             selectedFeedIds // Include the selected feed IDs in the request body
         });

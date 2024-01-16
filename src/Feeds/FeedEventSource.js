@@ -1,12 +1,15 @@
 // FeedEventSource.js
+import { feedsLogger as logger } from '../logger.js';
 
 import { updateArticlesUI } from './ui/FeedUI.js';
 import { cacheArticle } from './data/FeedCache.js';
 import { updateGraphForSelectedFeeds } from '../Graph/graph.js';
-import { feedsLogger as logger } from '../logger.js';
+import { getApiBaseUrl } from '../utils/apiConfig.js';
 
-const eventSourceArticles = new EventSource('/api/article-updates');
-const eventSource = new EventSource('/api/events');
+const baseUrl = getApiBaseUrl();
+
+const eventSourceArticles = new EventSource(`${baseUrl}/article-updates`);
+const eventSource = new EventSource(`${baseUrl}/events`);
 
 eventSourceArticles.onmessage = (event) => {
     const article = JSON.parse(event.data);

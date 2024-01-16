@@ -4,39 +4,43 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 
 import { login, reAuthenticate } from './auth.js';
-import { fetchFeeds, fetchStories } from './serverFeedsFetching.js';
+import { fetchFeeds, fetchStories, saveSessionCookie, loadSessionCookie } from './serverFeedsFetching.js';
 import { calculateAndSendSimilarityMatrix, articleUpdateEmitter } from './events.js';
 import { articleCache, fetchArticlesWithContentForFeeds } from './articles.js';
 
 
 const clients = [];
-const PORT = process.env.PORT || 3001;
+const mode = process.env.NODE_ENV === 'production'
+const PORT = process.env.PORT || mode ? 3000 : 3001;
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const server = express();
 server.use(express.json());
 server.use(cookieParser());
 
-const COOKIE_STORAGE_PATH = './src/server/temp_session_store.json';
+// Serve static files from Vite's build output folder (dist) only in production
+if (mode) {
+  server.use(express.static(path.join(__dirname, '../..', 'dist')));
+}
+
+
+
 let newsBlurSessionCookie = null;
 
 try {
-  if (fs.existsSync(COOKIE_STORAGE_PATH)) {
-    const cookieDataRaw = fs.readFileSync(COOKIE_STORAGE_PATH, 'utf8');
-    if (cookieDataRaw) {
-      const cookieData = JSON.parse(cookieDataRaw);
-      newsBlurSessionCookie = cookieData.sessionCookie;
-    } else {
-      logger.error('Session cookie file is empty.');
-    }
-  }
+  newsBlurSessionCookie = await loadSessionCookie();
 } catch (err) {
   logger.error('Error loading session cookie:', err);
 }
-
 
 
 
@@ -52,7 +56,7 @@ server.post('/login', async (req, res) => {
     if (loginResult.authenticated) {
       // Save the new session cookie and return it
       newsBlurSessionCookie = loginResult.sessionCookie;
-      fs.writeFileSync(COOKIE_STORAGE_PATH, JSON.stringify({ sessionCookie: newsBlurSessionCookie }));
+      await saveSessionCookie(newsBlurSessionCookie);
       res.status(200).json({ authenticated: true, sessionCookie: newsBlurSessionCookie });
     } else {
       res.status(401).json({ authenticated: false, error: loginResult.error });
@@ -143,6 +147,15 @@ server.get('/events', (req, res) => {
     clients.splice(clients.indexOf(res), 1);
   });
 });
+
+
+if (mode) {
+  // Serve index.html for any unknown paths
+  // MUST be declared after the other endpoints
+  server.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../..', 'dist', 'index.html'));
+  });
+}
 
 
 server.listen(PORT, () => {

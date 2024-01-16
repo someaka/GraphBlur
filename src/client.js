@@ -6,6 +6,11 @@ const inputUsername = document.getElementById("inputUsername");
 const inputPassword = document.getElementById("inputPassword");
 const loginStatusMessage = document.getElementById("loginStatusMessage");
 
+import { getApiBaseUrl } from './utils/apiConfig.js';
+
+const baseUrl = getApiBaseUrl();
+
+
 // Helper function to display login errors
 function displayLoginError(message) {
   loginStatusMessage.textContent = message;
@@ -34,7 +39,8 @@ async function handleLogin(event) {
   submitButton.textContent = "Loading...";
 
   try {
-    const response = await axios.post('/api/login', { username, password }, { withCredentials: true });
+    const response = await axios.post(`${baseUrl}/login`,
+      { username, password }, { withCredentials: true });
     logger.log("Login response:", response.data);
     if (response.data.authenticated) {
       // Save the session cookie if present and redirect to feeds.html

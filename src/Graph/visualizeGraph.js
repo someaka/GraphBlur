@@ -1,15 +1,13 @@
 import { visualGraphLogger as logger } from '../logger.js';
 
 import * as d3 from 'd3';
-import { forceAtlas2, defaultSettings, initializeGraphElements } from '../ForceAtlas2/forceAtlas.js';
+import { forceAtlas2, defaultSettings } from '../ForceAtlas2/forceAtlas.js';
 import { defineZoomBehavior, applyDragBehavior, setupSVGContainer } from './graphInteraction.js';
 import { createVisualElements, updateVisualization } from './graphElements.js';
 
 
 let graphGroup, simulation, defsContainer;
 
-const DEFAULT_WIDTH = 800;
-const DEFAULT_HEIGHT = 600;
 
 let currentForceAtlas2Settings = { ...defaultSettings };
 
@@ -68,7 +66,10 @@ function ticked() {
         return;
     }
     try {
+        calculateDegrees(graphData);
+
         forceAtlas2(simulation.alpha(), currentForceAtlas2Settings, graphData.nodes, graphData.links);
+        //console.log("prettified JSON graphData", JSON.stringify(graphData, null, 2));
         updateVisualization(graphData);
     } catch (error) {
         logger.error('Simulation tick failed:', error);
@@ -78,59 +79,90 @@ function ticked() {
 
 
 
-function constructGraphData(articles, dimensions = { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT }) {
-    // Create nodes for each article
-    const nodes = articles.map(article => ({
-        id: article.id,
-        title: article.title,
-        color: article.feedColor,
-    }));
+function calculateDegrees(graphData) {
+    const { nodes, links } = graphData;
+    // Initialize all degrees to 1 (to account for self-similarity)
+    const degrees = new Map(nodes.map(node => [node.id, 1]));
 
-    // Initialize nodes and set default positions and velocities
-    initializeGraphElements(nodes, [], dimensions.width, dimensions.height);
+    // Sum the weights of the links for each node
+    links.forEach(link => {
+        degrees.set(link.source.id, degrees.get(link.source.id) + link.weight);
+        degrees.set(link.target.id, degrees.get(link.target.id) + link.weight);
+    });
 
-    // Now create links between all nodes (initially without weights)
-    const links = [];
-    for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-            const link = {
-                source: nodes[i], // Direct reference to the source node object
-                target: nodes[j], // Direct reference to the target node object
-                weight: 0.1 // Initialize with a default weight of 1
-            };
-            links.push(link);
-        }
-    }
-
-    return { nodes, links };
+    // Assign the calculated degree back to the node objects
+    nodes.forEach(node => {
+        node.degree = degrees.get(node.id);
+        node.mass = node.degree;
+    });
 }
 
 
 
 
 
+
+
+function isValidNode({ id, x, y }) {
+    return typeof id !== 'undefined' && !isNaN(x) && !isNaN(y);
+}
+
+function isValidLink({ source, target }, nodes) {
+    const nodeIds = new Set(nodes.map(node => node.id));
+    return source && target &&
+        typeof source.id !== 'undefined' &&
+        typeof target.id !== 'undefined' &&
+        nodeIds.has(source.id) && nodeIds.has(target.id);
+}
+
+function verifyNodes(nodes) {
+    if (!Array.isArray(nodes)) {
+        throw new Error('The "nodes" parameter must be an array.');
+    }
+
+    nodes.forEach(node => {
+        if (!isValidNode(node)) {
+            throw new Error(`Invalid node detected: ${JSON.stringify(node)}`);
+        }
+    });
+}
+
+function verifyLinks(links, nodes) {
+    if (!Array.isArray(links)) {
+        throw new Error('The "links" parameter must be an array.');
+    }
+
+    links.forEach(link => {
+        if (!isValidLink(link, nodes)) {
+            throw new Error(`Invalid link detected: ${JSON.stringify(link)}`);
+        }
+    });
+}
+
+function verifyForceAtlas2Parameters(graphData) {
+    const { nodes, links } = graphData;
+    verifyNodes(nodes);
+    verifyLinks(links, nodes);
+}
+
+
+
+
+
+
 function visualizeGraph(newGraphData, selector = '#graph-container') {
-    // Stop the existing simulation if it's running
+    graphData = newGraphData;
     stopSimulation();
 
-    // Update the global graphData with the new data
-    graphData = newGraphData;
     const { width, height } = getGraphContainerDimensions(selector);
 
-    // Update the forceAtlas2 settings with the new dimensions
     updateForceAtlas2Settings({ width, height });
-
-    // Setup the SVG container and define zoom behavior
     setupSVGContainer(selector, width, height);
     defineZoomBehavior(d3.zoomIdentity);
-
-    // Initialize the force simulation with the new graph data
+    calculateDegrees(graphData);
+    verifyForceAtlas2Parameters(graphData);
     initializeForceSimulation(graphData);
-
-    // Create visual elements (nodes, links, etc.)
     createVisualElements(graphData);
-
-    // Reapply the drag behavior to the new nodes
     applyDragBehavior(simulation);
 }
 
@@ -145,7 +177,7 @@ function stopSimulation() {
 
 function clearGraph() {
     stopSimulation();
-    
+
     // Clear the contents of the SVG element without removing it
     if (graphGroup) {
         graphGroup.selectAll('*').remove();
@@ -177,7 +209,6 @@ function updateForceAtlas2Settings(newParams, settings = currentForceAtlas2Setti
 
 
 export {
-    constructGraphData,
     visualizeGraph,
     clearGraph,
     setGraphGroup,

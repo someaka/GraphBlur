@@ -1,10 +1,11 @@
+import { graphLogger as logger } from '../logger';
+
 import * as d3 from 'd3';
 import {
     graphGroup,
-    defsContainer,
     setGraphGroup,
     setDefsContainer
-} from './visualizeGraph';
+} from './visualizeGraph.js';
 
 let svgContainer
 let currentTransform = d3.zoomIdentity;

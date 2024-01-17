@@ -1,5 +1,5 @@
-import { updateSimulationSettings, setNegativeEdges, negativeEdges } from "./Graph/graph";
-
+import { setNegativeEdges, negativeEdges } from "./Graph/graph";
+import { updateForceAtlas2Settings } from "./Graph/visualizeGraph";
 
 
 function updateOutput(slider, output, scale, precision, scaleType) {
@@ -73,7 +73,7 @@ function initializeSliders() {
         slider.addEventListener('input', () => {
             updateOutput(slider, output, scale, precision, scaleType);
             // After updating the output, call the function to update the simulation settings
-            updateSimulationSettings({
+            updateForceAtlas2Settings({
                 // Pass the new settings based on the scaled values
                 gravity: parseFloat(document.getElementById('gravityOutput').textContent),
                 scalingRatio: parseFloat(document.getElementById('scalingRatioOutput').textContent),

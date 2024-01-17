@@ -1,30 +1,40 @@
 import * as d3 from 'd3';
 import { graphGroup, defsContainer } from './visualizeGraph';
 
+
 function createNodes(graphData) {
-    const nodes = graphGroup.selectAll('circle')
+    const tooltip = d3.select("#tooltip");
+
+    graphGroup.selectAll('circle')
         .data(graphData.nodes, d => d.id)
         .enter()
         .append('circle')
         .attr('r', 5)
-        .attr('fill', d => d.color);
-
-    // Append a title element to each node for the hover text
-    nodes.append('title')
-        .text(d => d.title);
-    // Add any additional node attributes or event listeners here
+        .attr('fill', d => d.color)
+        .on('mouseover', function(event, d) {
+            tooltip.style("visibility", "visible")
+                   .style("background-color", d.color) // Set the background color to the node color
+                   .html(d.title) // Set the tooltip content to the node title
+                   .style("left", (event.pageX - tooltip.node().offsetWidth / 2) + "px") // Center the tooltip horizontally
+                   .style("top", (event.pageY - tooltip.node().offsetHeight - 10) + "px"); // Position the tooltip above the cursor
+        })
+        .on('mousemove', function(event) {
+            tooltip.style("left", (event.pageX - tooltip.node().offsetWidth / 2) + "px")
+                   .style("top", (event.pageY - tooltip.node().offsetHeight - 10) + "px");
+        })
+        .on('mouseout', function() {
+            tooltip.style("visibility", "hidden");
+        });
 }
 
 function createLinks(graphData) {
-    const links = graphGroup.selectAll('line')
+    graphGroup.selectAll('line')
         .data(graphData.links, d => `${d.source.id}-${d.target.id}`)
         .enter()
         .append('line')
         .attr('stroke-width', 0.3)
         .attr('stroke-opacity', 0.2)
         .attr('stroke', d => `url(#gradient-${d.source.id}-${d.target.id})`);
-
-    // Add any additional link attributes or event listeners here
 }
 
 
@@ -56,8 +66,8 @@ function createLinkGradients(graphData, defsContainer) {
 
 function createVisualElements(graphData) {
     createLinks(graphData);
-    createNodes(graphData);
     createLinkGradients(graphData, defsContainer);
+    createNodes(graphData);
 }
 
 
@@ -108,9 +118,9 @@ function updateGradients(graphData) {
 }
 
 function updateVisualization(graphData) {
-    updateNodes(graphData);
     updateLinks(graphData);
     updateGradients(graphData);
+    updateNodes(graphData);
 }
 
 export { createVisualElements, updateVisualization };

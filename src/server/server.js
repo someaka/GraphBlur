@@ -3,13 +3,12 @@ import { serverLogger as logger } from '../logger.js';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 dotenv.config();
 
-import { login, reAuthenticate } from './auth.js';
+import { login } from './auth.js';
 import { fetchFeeds, fetchStories, saveSessionCookie, loadSessionCookie } from './serverFeedsFetching.js';
 import { calculateAndSendSimilarityMatrix, articleUpdateEmitter } from './events.js';
 import { articleCache, fetchArticlesWithContentForFeeds } from './articles.js';
@@ -103,13 +102,22 @@ server.post('/fetch-articles', async (req, res) => {
   }
 
   try {
-    const articlesWithContent = await fetchArticlesWithContentForFeeds(feedId);
-    res.status(200).json({ articles: articlesWithContent });
+    // Fetch new articles for the provided feedId
+    const newArticlesWithContent = await fetchArticlesWithContentForFeeds(feedId);
+    // Update the cache with the new articles
+    articleCache[feedId] = newArticlesWithContent;
 
-    // Call the similarity matrix calculation function
-    if (Array.isArray(selectedFeedIds) && selectedFeedIds.length > 0) {
-      calculateAndSendSimilarityMatrix(clients, selectedFeedIds);
-    }
+    // Send only the new articles to the client
+    res.status(200).json({ articles: newArticlesWithContent });
+
+    // Retrieve articles from the cache for the selected feed IDs
+    const cachedArticles = selectedFeedIds.flatMap(id => articleCache[id] || []);
+
+    // Combine new articles with cached articles for similarity calculation
+    const allArticlesWithContent = [...newArticlesWithContent, ...cachedArticles];
+
+    // Call the similarity matrix calculation function with all articles
+    calculateAndSendSimilarityMatrix(clients, allArticlesWithContent);
   } catch (error) {
     logger.error('Error fetching articles:', error);
     res.status(500).json({ error: 'Internal server error' });

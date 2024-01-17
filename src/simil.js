@@ -113,7 +113,7 @@ async function createSimilarityMatrix(articles) {
     //logger.log("Similarity matrix initialized:", similarityMatrix);
     const workerPool = createWorkerPool(numCPUs);
     setupWorkerPoolEventListeners(workerPool);
-    logger.log("Worker pool created.");
+    //logger.log("Worker pool created.");
     try {
         await processTasks(workerPool, articles.length, embeddings, similarityMatrix);
     } finally {

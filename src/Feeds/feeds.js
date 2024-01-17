@@ -1,4 +1,5 @@
 // feeds.js
+import './FeedEventSource.js';
 
 import { initializeFeedsDisplay } from './FeedInitializer.js';
 

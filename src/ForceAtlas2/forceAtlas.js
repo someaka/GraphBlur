@@ -1,6 +1,11 @@
+// eslint-disable-next-line no-unused-vars
 import { forceAtlasLogger as logger } from '../logger.js';
 
-import { buildQuadTree } from './quadTree.js';
+// import { QuadTree, buildQuadTree, getDistance } from './quadTree.js';
+import { QuadTree } from './quadTree2.js'; // Import QuadTree class
+
+const DEFAULT_WIDTH = 800;
+const DEFAULT_HEIGHT = 600;
 
 const defaultSettings = {
     gravity: 1,
@@ -9,229 +14,77 @@ const defaultSettings = {
     dissuadeHubs: true,
     preventOverlap: true,
     barnesHutTheta: 1.2,
-    repulsionStrength: 1,
+    repulsionStrength: 5000,
     coolingRate: 0.1,
-    width: 800, // Default layout width
-    height: 600, // Default layout height
-    nodeRadius: () => 5 // Default function for node radius
+    width: DEFAULT_WIDTH,
+    height: DEFAULT_WIDTH,
+    nodeRadius: () => 5
 };
 
 
 
-function initializeGraphElements(nodes, links, width = 800, height = 600) {
-    // Check if width and height are numbers
-    if (typeof width !== 'number' || isNaN(width)) {
-        logger.error('Width is not a number:', width);
-        width = 800; // Set a default width if invalid
-    }
-    if (typeof height !== 'number' || isNaN(height)) {
-        logger.error('Height is not a number:', height);
-        height = 600; // Set a default height if invalid
-    }
 
-    // Default initialization values for nodes
-    const defaultX = width / 2;
-    const defaultY = height / 2;
-    const defaultVx = 0;
-    const defaultVy = 0;
+function initializeSettings(customSettings, nodes) {
+    const settings = { ...defaultSettings, ...customSettings };
+    const maxVelocity = customSettings.maxVelocity || 1;
+    const k = Math.sqrt((settings.width * settings.height) / nodes.length);
+    const center = { x: settings.width / 2, y: settings.height / 2 };
 
-    // Initialize node properties with slight randomization to avoid zero distance
-    nodes.forEach(node => {
-        node.x = typeof node.x === 'number' && !isNaN(node.x) ? node.x : defaultX + (Math.random() - 0.5) * 10;
-        node.y = typeof node.y === 'number' && !isNaN(node.y) ? node.y : defaultY + (Math.random() - 0.5) * 10;
-        node.vx = typeof node.vx === 'number' && !isNaN(node.vx) ? node.vx : defaultVx;
-        node.vy = typeof node.vy === 'number' && !isNaN(node.vy) ? node.vy : defaultVy;
-    });
-
-    // // Log the node properties to confirm they are set correctly
-    // nodes.forEach(node => {
-    //     logger.log(`Node initialized: ${JSON.stringify(node)}`);
-    // });
-
-    // Default initialization value for link weights
-    const defaultWeight = 1;
-
-    // Initialize link weights
-    links.forEach(link => {
-        link.weight = typeof link.weight === 'number' && !isNaN(link.weight) ? link.weight : defaultWeight;
-    });
-}
-
-function verifyForceAtlas2Parameters(nodes, edges) {
-    // Verify nodes array
-    if (!Array.isArray(nodes)) {
-        throw new Error('The nodes parameter must be an array.');
-    }
-    for (const node of nodes) {
-        if (typeof node.id === 'undefined') {
-            throw new Error('Each node must have an id property.');
-        }
-    }
-
-    // Verify edges array
-    if (!Array.isArray(edges)) {
-        throw new Error('The edges parameter must be an array.');
-    }
-    for (const edge of edges) {
-        if (typeof edge.source !== 'object' || typeof edge.source.id === 'undefined') {
-            throw new Error('Each edge must have a source property that is an object with an id.');
-        }
-        if (typeof edge.target !== 'object' || typeof edge.target.id === 'undefined') {
-            throw new Error('Each edge must have a target property that is an object with an id.');
-        }
-        if (!nodes.some(n => n.id === edge.source.id)) {
-            throw new Error(`Edge source id ${edge.source.id} does not correspond to any node id.`);
-        }
-        if (!nodes.some(n => n.id === edge.target.id)) {
-            throw new Error(`Edge target id ${edge.target.id} does not correspond to any node id.`);
-        }
-    }
+    return { ...settings, maxVelocity, k, center };
 }
 
 
 function forceAtlas2(alpha, customSettings, nodes, edges) {
-    //logger.log("Edges received in forceAtlas2:", edges);
-    //logger.log("Applying forceAtlas2 with settings:", JSON.stringify(customSettings));
-
-    // Calculate degrees for nodes based on link weights
-    calculateDegrees(nodes, edges);
-    // Initialize node properties and link weights
-    initializeGraphElements(nodes, edges, customSettings.width, customSettings.height);
-    logger.log("Nodes and edges initialized", JSON.stringify(nodes), JSON.stringify(edges));
-    // Verify parameters before proceeding
-    verifyForceAtlas2Parameters(nodes, edges);
-    // Merge custom settings with default settings
-    const settings = { ...defaultSettings, ...customSettings };
-
-    // Extract settings
-    const {
-        gravity,
-        scalingRatio,
-        edgeWeightInfluence,
-        dissuadeHubs,
-        preventOverlap,
-        barnesHutTheta,
-        repulsionStrength,
-        coolingRate,
-        width,
-        height,
-        nodeRadius
-    } = settings;
-
-    // Define the maximum velocity
-    const maxVelocity = customSettings.maxVelocity || 1; // Use a default value if not specified
-
-    // Define k based on width and height (example: k = Math.sqrt((width * height) / nodes.length))
-    const k = Math.sqrt((width * height) / nodes.length);
-
-    // Initialize the quadtree
-    let quadTree = buildQuadTree(nodes, barnesHutTheta);
-
-    // Cooling factor to reduce the movement over time
+    const settings = initializeSettings(customSettings, nodes);
     let cooling = 1 - alpha;
 
-    // Apply attraction forces once for all edges
-    applyAttraction(nodes, edges, edgeWeightInfluence, k);
+    applyAttraction(edges, settings.edgeWeightInfluence, settings.k);
+    applyGravity(nodes, settings.gravity, settings.scalingRatio, settings.center);
 
-    // Apply gravity once for all nodes
-    const center = { x: width / 2, y: height / 2 };
-    applyGravity(nodes, gravity, scalingRatio, center);
+    applyForcesToNodes(nodes, settings, cooling);
 
-    // Main loop to apply forces to each node
-    for (let i = 0, n = nodes.length; i < n; ++i) {
-        const node = nodes[i];
-
-        // Log the node properties to confirm they are set correctly
-        // nodes.forEach(node => {
-        //     logger.log(`Node initialized: ${JSON.stringify(node)}`);
-        // });
-
-        // Apply repulsion forces (with Barnes-Hut optimization)
-        const repulsion = quadTree.calculateRepulsion(node, barnesHutTheta, repulsionStrength);
-        const degreeFactor = isNaN(node.degree) || node.degree === 0 ? 1 : node.degree;
-        node.vx += repulsion.forceX * (dissuadeHubs ? degreeFactor : 1);
-        node.vy += repulsion.forceY * (dissuadeHubs ? degreeFactor : 1);
-
-        // Log the values after applying repulsion
-        // logger.log(`Values after repulsion for node ${node.id}:`, `x: ${node.x}, y: ${node.y}, vx: ${node.vx}, vy: ${node.vy}`);
-
-        // Prevent overlapping (if enabled)
-        if (preventOverlap) {
-            applyPreventOverlap(nodes, nodeRadius); // Assuming nodeRadius is defined
-        }
-
-        // Update velocity and position based on forces
-        updateVelocity(node, cooling, maxVelocity);
-        updatePosition(node, width, height);
-
-
-        // Log the values after updating velocity and position
-        // logger.log(`Values after update for node ${node.id}:`, `x: ${node.x}, y: ${node.y}, vx: ${node.vx}, vy: ${node.vy}`);
-    }
-
-    // Update the cooling factor dynamically for the next iteration
-    cooling *= 1 - coolingRate;
-
-    // Update the quadtree for the next iteration (Barnes-Hut optimization)
-    quadTree = buildQuadTree(nodes, barnesHutTheta);
+    cooling *= 1 - settings.coolingRate;
 }
 
 
 
-function calculateDegrees(nodes, links) {
-    // Initialize all degrees to 1 (to account for self-similarity)
-    const degrees = new Map(nodes.map(node => [node.id, 1]));
 
-    // Sum the weights of the links for each node
-    links.forEach(link => {
-        degrees.set(link.source.id, degrees.get(link.source.id) + link.weight);
-        degrees.set(link.target.id, degrees.get(link.target.id) + link.weight);
-    });
-
-    // Assign the calculated degree back to the node objects
-    nodes.forEach(node => {
-        node.degree = degrees.get(node.id);
-    });
-}
-
-function applyAttraction(nodes, edges, edgeWeightInfluence, k) {
+function applyAttraction(edges, edgeWeightInfluence, k) {
     for (const edge of edges) {
-
         const source = edge.source;
         const target = edge.target;
         const weight = edge.weight || 1;
 
-        const xDistance = target.x - source.x;
-        const yDistance = target.y - source.y;
-        const distance = Math.sqrt(xDistance * xDistance + yDistance * yDistance);
+        const distance = getDistance(source, target);
 
         // Calculate the attraction force with edge weight influence
-        const attractionForce = (distance * distance) / (k-k * Math.pow(weight, edgeWeightInfluence));
-        // const clippedAttraction = Math.min(attractionForce, 1);
-        // attractionForce = clippedAttraction * (1 - clippedAttraction);
+        const attractionForce = distance / k * Math.pow(weight, edgeWeightInfluence);
+        // logger.log("attraction", attractionForce)
 
-        if (distance > 0) {
-            source.vx += (xDistance / distance) * attractionForce;
-            source.vy += (yDistance / distance) * attractionForce;
-            target.vx -= (xDistance / distance) * attractionForce;
-            target.vy -= (yDistance / distance) * attractionForce;
-        }
+        const xDistance = target.x - source.x;
+        const yDistance = target.y - source.y;
+
+        source.vx += xDistance * attractionForce;
+        source.vy += yDistance * attractionForce;
+        target.vx -= xDistance * attractionForce;
+        target.vy -= yDistance * attractionForce;
     }
 }
 
+
 function applyGravity(nodes, gravity, scalingRatio, center) {
     for (const node of nodes) {
-        // Use node.degree + 1 as mass if mass is not defined
         const mass = node.mass !== undefined ? node.mass : (node.degree + 1);
 
-        const xDistance = center.x - node.x;
-        const yDistance = center.y - node.y;
-        const distance = Math.sqrt(xDistance * xDistance + yDistance * yDistance);
+        const distance = getDistance(node, center);
 
         // Calculate the gravity force
         const gravityForce = gravity * mass * scalingRatio;
 
         if (distance > 0) {
+            const xDistance = center.x - node.x;
+            const yDistance = center.y - node.y;
+
             node.vx += (xDistance / distance) * gravityForce;
             node.vy += (yDistance / distance) * gravityForce;
         }
@@ -243,13 +96,14 @@ function applyPreventOverlap(nodes, nodeRadius) {
         for (let j = i + 1; j < nodes.length; j++) {
             const nodeA = nodes[i];
             const nodeB = nodes[j];
-            const dx = nodeB.x - nodeA.x;
-            const dy = nodeB.y - nodeA.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const minDistance = nodeRadius(nodeA) + nodeRadius(nodeB); // Assuming nodeRadius is a function returning the radius
+
+            const distance = getDistance(nodeA, nodeB);
+            const minDistance = nodeRadius(nodeA) + nodeRadius(nodeB);
 
             if (distance < minDistance) {
                 const overlap = minDistance - distance;
+                const dx = nodeB.x - nodeA.x;
+                const dy = nodeB.y - nodeA.y;
                 const pushX = (dx / distance) * overlap / 2;
                 const pushY = (dy / distance) * overlap / 2;
 
@@ -261,6 +115,77 @@ function applyPreventOverlap(nodes, nodeRadius) {
         }
     }
 }
+
+
+
+
+
+
+
+
+import { calculateSimpleRepulsion } from './simpleRepulsion.js';
+
+
+const simpleRepulsion = true;
+
+function applyForcesToNodes(nodes, settings, cooling) {
+    const { dissuadeHubs, preventOverlap, barnesHutTheta, repulsionStrength, maxVelocity, width, height, nodeRadius } = settings;
+    const quadTree = new QuadTree(-width / 2, width / 2, -height / 2, height / 2);
+
+    if (simpleRepulsion) {
+        calculateSimpleRepulsion(nodes, repulsionStrength);
+    } else {
+        // Build a new quadtree for the current iteration
+        nodes.forEach(node => quadTree.insert(node));
+    }
+
+    // Use the quadTree to calculate repulsion forces with Barnes-Hut optimization
+    nodes.forEach(node => {
+        if (simpleRepulsion) {
+            const repulsion = quadTree.calculateRepulsion(node, barnesHutTheta * barnesHutTheta, repulsionStrength);
+            node.vx += repulsion.forceX;
+            node.vy += repulsion.forceY;
+        }
+
+        // Apply dissuadeHubs factor and update velocity and position
+        const degreeFactor = isNaN(node.degree) || node.degree === 0 ? 1 : node.degree;
+        node.vx *= (dissuadeHubs ? degreeFactor : 1);
+        node.vy *= (dissuadeHubs ? degreeFactor : 1);
+
+        updateVelocity(node, cooling, maxVelocity);
+        updatePosition(node, width, height);
+    });
+
+    if (preventOverlap) {
+        applyPreventOverlap(nodes, nodeRadius);
+    }
+}
+
+
+
+
+
+
+// function applyForcesToNodes(nodes, settings, cooling) {
+//     const { dissuadeHubs, preventOverlap, repulsionStrength, maxVelocity, width, height, nodeRadius } = settings;
+
+//     calculateSimpleRepulsion(nodes, repulsionStrength);
+
+//     nodes.forEach(node => {
+//         const degreeFactor = isNaN(node.degree) || node.degree === 0 ? 1 : node.degree;
+//         node.vx *= (dissuadeHubs ? degreeFactor : 1);
+//         node.vy *= (dissuadeHubs ? degreeFactor : 1);
+
+//         updateVelocity(node, cooling, maxVelocity);
+//         updatePosition(node, width, height);
+//     });
+
+//     if (preventOverlap) {
+//         applyPreventOverlap(nodes, nodeRadius);
+//     }
+// }
+
+
 
 function clipVelocity(node, maxVelocity) {
     const length = Math.sqrt(node.vx * node.vx + node.vy * node.vy);
@@ -287,4 +212,17 @@ function updatePosition(node, width, height) {
     node.y = Math.min(height, Math.max(0, node.y));
 }
 
-export { forceAtlas2, defaultSettings, initializeGraphElements };
+
+
+function getDistance(node, point) {
+    const dx = node.x - point.x;
+    const dy = node.y - point.y;
+    return Math.hypot(dx, dy);
+}
+
+export {
+    defaultSettings,
+    DEFAULT_HEIGHT,
+    DEFAULT_WIDTH,
+    forceAtlas2
+};

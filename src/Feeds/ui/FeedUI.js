@@ -4,7 +4,6 @@ import { formatArticleText } from '../utils/FeedUtils.js';
 import { articlesCache } from '../data/FeedCache.js';
 import { feedsLogger as logger } from '../../logger.js';
 import { loadArticles } from '../data/FeedData.js';
-import { updateGraphForSelectedFeeds } from '../../Graph/graph.js';
 
 const mainContentElement = document.querySelector('#maincontent');
 const articlesElement = document.querySelector('#articles');
@@ -63,7 +62,38 @@ async function displayArticles(feedData) {
         articlesElement.appendChild(articleContainer);
     });
 
-    updateGraphForSelectedFeeds(articlesCache); // Pass articlesCache as an argument
 }
 
-export { toggleMainContent, toggleFeedElement, displayArticles };
+
+
+const articleTemplate = document.querySelector('#articleTemplate');
+
+function updateArticlesUI(article) {
+    // Check if an article container for this UUID already exists
+    const articleElement = articlesElement.querySelector(`.article[data-id="${article.id}"]`);
+    if (articleElement) {
+        // Article already exists, update its content
+        const contentElement = articleElement.querySelector('.content');
+        if (contentElement) contentElement.innerHTML = article.content;
+    } else {
+        // Article is new, use the template to create a new element and append it to the list of articles
+        const articleTemplateClone = articleTemplate.content.cloneNode(true);
+        const newArticleElement = articleTemplateClone.querySelector('.article');
+        newArticleElement.dataset.id = article.id; // Set the data-id attribute to the article's UUID
+
+        const titleElement = newArticleElement.querySelector('.title');
+        const textElement = newArticleElement.querySelector('.text');
+        titleElement.textContent = article.title;
+        textElement.innerHTML = article.content;
+
+        articlesElement.appendChild(newArticleElement);
+    }
+}
+
+
+export { 
+    toggleMainContent, 
+    toggleFeedElement, 
+    displayArticles,
+    updateArticlesUI
+};

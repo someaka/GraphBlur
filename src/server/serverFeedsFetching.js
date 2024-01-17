@@ -2,11 +2,8 @@ import { serverLogger as logger } from '../logger.js';
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { reAuthenticate } from './auth.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+
 const SESSION_STORE_PATH = path.join(process.cwd(), 'temp_session_store.json');
 const NEWSBLUR_URL = 'https://www.newsblur.com';
 

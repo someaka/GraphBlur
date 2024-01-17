@@ -8,6 +8,11 @@ import { feedsLogger as logger } from '../../logger.js';
 import { updateFeedElementStyles } from '../../domUtils.js';
 import { clearGraph } from '../../Graph/visualizeGraph.js';
 
+
+const selectAllButton = document.querySelector('#selectAllButton');
+
+
+
 async function selectAllFeedsActions(allFeeds, feedsData) {
     for (const feedElement of allFeeds) {
         const feedId = feedElement.id;

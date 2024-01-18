@@ -34,7 +34,9 @@ function createLinks(graphData) {
         .append('line')
         .attr('stroke-width', 0.3)
         .attr('stroke-opacity', 0.2)
-        .attr('stroke', d => `url(#gradient-${d.source.id}-${d.target.id})`);
+        .attr('stroke', d => `url(#gradient-${d.source.id}-${d.target.id})`)
+        .attr('pointer-events', 'none'); // Disable pointer events for the lines
+
 }
 
 
@@ -121,6 +123,7 @@ function updateVisualization(graphData) {
     updateLinks(graphData);
     updateGradients(graphData);
     updateNodes(graphData);
+    d3.select('.nodes-group').raise();
 }
 
 export { createVisualElements, updateVisualization };

@@ -1,5 +1,5 @@
 import { serverLogger as logger } from '../logger.js';
-import { createSimilarityMatrix } from '../simil.js';
+import { createSimilarityMatrix } from '../Simil/simil.js';
 import { EventEmitter } from 'events';
 
 // Create an instance of the EventEmitter class to use for article updates

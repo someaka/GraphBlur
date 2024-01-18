@@ -1,100 +1,98 @@
 import { similLogger as logger } from '../logger.js';
 import { getEmbeddings } from './similarityInteraction.js';
-import { 
-    createWorkerPool, 
-    setupWorkerPoolEventListeners, 
-    terminateWorkerPool 
-} from './workerSupport.js';
+import { createWorkerPool, terminateWorkerPool } from './workerSupport.js';
 import { cpus } from 'os';
 
+const numCPUs = Math.max(1, cpus().length / 2 - 1);
 
-const numCPUs = cpus().length / 2 - 1;
+class ArticleError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'ArticleError';
+    }
+}
 
+function validateArticles(articles) {
+    if (articles.some(article => !article || typeof article.title !== 'string' || typeof article.text !== 'string')) {
+        throw new ArticleError('Article is missing title or text property');
+    }
+    if (articles.every(article => !`${article.title} ${article.text}`.trim())) {
+        throw new ArticleError('All articles are empty. Cannot calculate similarity matrix.');
+    }
+}
+
+function extractTextsFromArticles(articles) {
+    return articles.map(article => `${article.title} ${article.text}`.replace(/<[^>]*>/g, ''));
+}
+
+function initializeSimilarityMatrix(size) {
+    return Array.from({ length: size }, () => new Array(size).fill(0));
+}
 
 async function createSimilarityMatrix(articles) {
     logger.log(`Starting to get embeddings for ${articles.length} articles.`);
-
-    // Adjust the mapping to the new article structure
-    const texts = articles.map(article => {
-        if (!article || typeof article.title !== 'string' || typeof article.text !== 'string') {
-            throw new Error('Article is missing title or text property');
-        }
-        return `${article.title} ${article.text}`.replace(/<[^>]*>/g, '');
-    });
-
-    if (texts.every(text => !text.trim())) {
-        throw new Error('All articles are empty. Cannot calculate similarity matrix.');
-    }
-
+    validateArticles(articles);
+    const texts = extractTextsFromArticles(articles);
     const embeddings = await getEmbeddings(texts);
     logger.log("Embeddings retrieved.");
 
     const similarityMatrix = initializeSimilarityMatrix(articles.length);
-    //logger.log("Similarity matrix initialized:", similarityMatrix);
-    const workerPool = createWorkerPool(numCPUs);
-    setupWorkerPoolEventListeners(workerPool);
-    //logger.log("Worker pool created.");
+    const workerPool = createWorkerPool(numCPUs); // Worker pool is created here
+
     try {
         await processTasks(workerPool, articles.length, embeddings, similarityMatrix);
     } finally {
-        terminateWorkerPool(workerPool);
+        terminateWorkerPool(workerPool); // Worker pool is terminated here
     }
 
     logger.log("Similarity matrix calculation completed.");
     return similarityMatrix;
 }
 
-function initializeSimilarityMatrix(size) {
-    return Array.from({ length: size }, (_, index) =>
-        new Array(size).fill(0).fill(1, index, index + 1)
-    );
-}
+
+
+
+
 
 async function processTasks(workerPool, numArticles, embeddings, similarityMatrix) {
-    const taskGenerator = generateTasks(numArticles);
-
-    const promises = workerPool.map(worker =>
-        new Promise((resolve, reject) => {
-            const handleNextTask = async () => {
-                const { done, value } = taskGenerator.next();
-                if (!done) {
-                    const { i, j } = value;
-                    worker.postMessage({
-                        vector1: embeddings[i],
-                        vector2: embeddings[j],
-                        indexI: i,
-                        indexJ: j
-                    });
-                } else {
-                    resolve();
-                }
-            };
-
-            worker.on('message', (message) => {
-                if ('similarity' in message) {
-                    const { similarity, indexI, indexJ } = message;
-                    if (similarityMatrix && indexI < similarityMatrix.length && indexJ < similarityMatrix.length) {
-                        similarityMatrix[indexI][indexJ] = similarity;
-                        similarityMatrix[indexJ][indexI] = similarity;
+    for (const task of generateTasks(numArticles)) {
+        await new Promise((resolve, reject) => {
+            getAvailableWorker(workerPool).then(worker => {
+                const handleMessage = (message) => {
+                    worker.removeListener('error', handleError); // Clean up the error listener
+                    if (message.error) {
+                        reject(new Error(message.error));
                     } else {
-                        logger.error(`Invalid indices or uninitialized matrix: indexI=${indexI}, indexJ=${indexJ}`);
+                        similarityMatrix[task.i][task.j] = message.similarity;
+                        similarityMatrix[task.j][task.i] = message.similarity;
+                        resolve();
                     }
-                    handleNextTask();
-                } else {
-                    // Handle other types of messages, such as the greeting message
-                    logger.log('Message from worker:', message);
-                }
+                };
+                const handleError = (error) => {
+                    worker.removeListener('message', handleMessage); // Clean up the message listener
+                    reject(error);
+                };
+                worker.once('message', handleMessage);
+                worker.once('error', handleError);
+                worker.postMessage({
+                    vector1: embeddings[task.i],
+                    vector2: embeddings[task.j],
+                    indexI: task.i,
+                    indexJ: task.j
+                });
             });
+        });
 
-            worker.on('error', reject);
-            worker.on('exit', resolve);
-
-            handleNextTask();
-        })
-    );
-
-    await Promise.all(promises);
+        // Log memory usage after each task
+        const used = process.memoryUsage().heapUsed / 1024 / 1024;
+        logger.log(`Memory usage after task: ${Math.round(used * 100) / 100} MB`);
+    }
+    await waitForAllWorkers(workerPool);
 }
+
+
+
+
 
 function* generateTasks(numArticles) {
     for (let i = 0; i < numArticles; i++) {
@@ -104,4 +102,39 @@ function* generateTasks(numArticles) {
     }
 }
 
-export { createSimilarityMatrix }
+function getAvailableWorker(workerPool) {
+    // This function should return a promise that resolves with an available worker
+    return new Promise((resolve) => {
+        const availableWorker = workerPool.workers.find(worker => !worker.isBusy);
+        if (availableWorker) {
+            resolve(availableWorker);
+        } else {
+            const onWorkerAvailable = (worker) => {
+                workerPool.removeListener('workerAvailable', onWorkerAvailable);
+                resolve(worker);
+            };
+            workerPool.on('workerAvailable', onWorkerAvailable);
+        }
+    });
+}
+
+
+
+function waitForAllWorkers(workerPool) {
+    // This function should return a promise that resolves when all workers have completed their tasks
+    const allWorkersDonePromises = workerPool.workers.map(worker => new Promise((resolve) => {
+        if (worker.isBusy) {
+            const onWorkerDone = () => {
+                worker.removeListener('done', onWorkerDone);
+                resolve();
+            };
+            worker.on('done', onWorkerDone);
+        } else {
+            resolve();
+        }
+    }));
+
+    return Promise.all(allWorkersDonePromises);
+}
+
+export { createSimilarityMatrix };

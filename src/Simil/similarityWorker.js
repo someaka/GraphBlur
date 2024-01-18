@@ -1,39 +1,16 @@
-// src/Simil/similarityWorker.js
-import { parentPort } from 'worker_threads';
-import { similWorkerLogger as logger } from '../logger.js';
+import { similLogger as logger } from '../logger.js';
 import { calculateSimilarity } from './similarityCalculate.js';
-import { WORKER_PATH } from './similarityConfig.js';
-import { Worker } from 'worker_threads';
+import { parentPort } from 'worker_threads';
 
-
-const similarityWorker = new Worker(WORKER_PATH);
-
-// And update the event listeners accordingly
-similarityWorker.on('message', (msg) => {
-    logger.log('Message from similarity worker:', msg);
-});
-
-similarityWorker.on('error', (error) => {
-    logger.error('Similarity worker error:', error);
-});
-
-similarityWorker.on('exit', (code) => {
-    if (code !== 0) {
-        logger.error(`Similarity worker stopped with exit code ${code}`);
-    }
-});
-
-
-
-parentPort.on('message', ({ vector1, vector2, indexI, indexJ }) => {
+parentPort.on('message', async ({ vector1, vector2, indexI, indexJ }) => {
     logger.log(`Worker received vectors for index ${indexI} and index ${indexJ}`);
     try {
         const similarity = calculateSimilarity(vector1, vector2);
         logger.log(`Worker calculated similarity between index ${indexI} and index ${indexJ}: ${similarity}`);
-        logger.log(`Worker sending similarity result back to parent for index ${indexI} and index ${indexJ}`);
-        parentPort.postMessage({ similarity, indexI, indexJ });
+        parentPort.postMessage({ type: 'taskCompleted', similarity, indexI, indexJ });
     } catch (error) {
         logger.error(`Error in worker: ${error.message}`);
+        parentPort.postMessage({ type: 'taskCompleted', error: error.message, indexI, indexJ });
     }
 });
 

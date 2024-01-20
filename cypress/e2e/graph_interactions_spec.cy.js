@@ -8,6 +8,7 @@ describe('Graph Interactions', () => {
     // Log the base URL to the console
     console.log('Base URL:', baseUrl);
 
+
     // Intercept the API call that fetches the feeds before starting the login process
     cy.intercept('GET', `${baseUrl}/feeds`).as('getFeeds');
 
@@ -40,14 +41,19 @@ describe('Graph Interactions', () => {
 
     cy.screenshot('after');
 
-    // Call the task to compare images
-    cy.task('compareSnapshots', {
-      before: 'cypress/screenshots/before.png',
-      after: 'cypress/screenshots/after.png',
-      threshold: 0.1
-    }).then(diffPixels => {
-      // Assert based on the number of different pixels
-      expect(diffPixels).to.be.greaterThan(0.01);
+    // Get the paths of the screenshots
+    cy.task('getBeforeScreenshotPath').then((beforePath) => {
+      cy.task('getAfterScreenshotPath').then((afterPath) => {
+        // Call the task to compare images
+        cy.task('compareSnapshots', {
+          before: beforePath,
+          after: afterPath,
+          threshold: 0.1
+        }).then(diffPixels => {
+          // Assert based on the number of different pixels
+          expect(diffPixels).to.be.greaterThan(0.01);
+        });
+      });
     });
 
   });

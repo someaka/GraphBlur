@@ -50,12 +50,18 @@
     flex: 1;
     /* Assign a flex-grow value to control the width */
     /* Additional styles */
+    z-index: 15;
+    /* higher than the right panel */
+
 }
 
 #graph-container {
     height: 100vh;
     /* Full height of the viewport */
     /* width: 100vw; Full width of the viewport */
+    z-index: 16;
+    /* higher than the right panel */
+
 }
 
 #maincontent {
@@ -126,35 +132,53 @@
 }
 
 .slider {
-    -webkit-appearance: none; /* Override default appearance for WebKit browsers */
-    appearance: none; /* Standard syntax: Override default appearance for all browsers */
-    width: 100%; /* Full-width */
-    height: 2px; /* Specified height */
-    background: #ddd; /* Grey background */
-    outline: none; /* Remove outline */
-    opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
-    -webkit-transition: .2s; /* 0.2 seconds transition on hover for WebKit browsers */
+    -webkit-appearance: none;
+    /* Override default appearance for WebKit browsers */
+    appearance: none;
+    /* Standard syntax: Override default appearance for all browsers */
+    width: 100%;
+    /* Full-width */
+    height: 2px;
+    /* Specified height */
+    background: #ddd;
+    /* Grey background */
+    outline: none;
+    /* Remove outline */
+    opacity: 0.7;
+    /* Set transparency (for mouse-over effects on hover) */
+    -webkit-transition: .2s;
+    /* 0.2 seconds transition on hover for WebKit browsers */
     transition: opacity .2s;
 }
 
 .slider:hover {
-    opacity: 1; /* Fully opaque on hover */
+    opacity: 1;
+    /* Fully opaque on hover */
 }
 
 .slider::-webkit-slider-thumb {
-    -webkit-appearance: none; /* Override default look */
+    -webkit-appearance: none;
+    /* Override default look */
     appearance: none;
-    width: 25px; /* Set a specific slider handle width */
-    height: 25px; /* Slider handle height */
-    background: #4CAF50; /* Green background */
-    cursor: pointer; /* Cursor on hover */
+    width: 25px;
+    /* Set a specific slider handle width */
+    height: 25px;
+    /* Slider handle height */
+    background: #4CAF50;
+    /* Green background */
+    cursor: pointer;
+    /* Cursor on hover */
 }
 
 .slider::-moz-range-thumb {
-    width: 25px; /* Set a specific slider handle width */
-    height: 25px; /* Slider handle height */
-    background: #4CAF50; /* Green background */
-    cursor: pointer; /* Cursor on hover */
+    width: 25px;
+    /* Set a specific slider handle width */
+    height: 25px;
+    /* Slider handle height */
+    background: #4CAF50;
+    /* Green background */
+    cursor: pointer;
+    /* Cursor on hover */
 }
 
 .slider-min-max {
@@ -178,7 +202,8 @@
 
 .slider-explanation {
     font-size: smaller;
-    color: #999; /* Lighter shade of grey */
+    color: #999;
+    /* Lighter shade of grey */
 }
 
 
@@ -193,17 +218,19 @@
 .custom-toggle-switch {
     position: relative;
     display: inline-block;
-    width: 50px; /* Width of the switch */
-    height: 24px; /* Height of the switch */
-  }
-  
-  .custom-toggle-switch input {
+    width: 50px;
+    /* Width of the switch */
+    height: 24px;
+    /* Height of the switch */
+}
+
+.custom-toggle-switch input {
     opacity: 0;
     width: 0;
     height: 0;
-  }
-  
-  .custom-toggle-slider {
+}
+
+.custom-toggle-slider {
     position: absolute;
     cursor: pointer;
     top: 0;
@@ -213,9 +240,9 @@
     background-color: #ccc;
     transition: .4s;
     border-radius: 24px;
-  }
-  
-  .custom-toggle-slider:before {
+}
+
+.custom-toggle-slider:before {
     position: absolute;
     content: "";
     height: 20px;
@@ -225,12 +252,23 @@
     background-color: white;
     transition: .4s;
     border-radius: 50%;
-  }
-  
-  input:checked + .custom-toggle-slider {
+}
+
+input:checked+.custom-toggle-slider {
     background-color: #2196F3;
-  }
-  
-  input:checked + .custom-toggle-slider:before {
+}
+
+input:checked+.custom-toggle-slider:before {
     transform: translateX(26px);
-  }
+}
+
+/* Add this to your CSS file or within a <style> tag in your HTML */
+.sigma-mouse-enabled :hover {
+    cursor: default !important;
+}
+
+#tooltip {
+    position: absolute;
+    pointer-events: none; /* Ignore all pointer events */
+    /* ... other styles ... */
+}

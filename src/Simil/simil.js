@@ -1,6 +1,6 @@
 import { similLogger as logger } from '../logger.js';
 import { getEmbeddings } from './similarityInteraction.js';
-import { createWorkerPool, terminateWorkerPool } from './workerSupport.js';
+import { createWorkerPool, terminateWorkerPool } from '../utils/workerSupport.js';
 import { cpus } from 'os';
 
 const numCPUs = Math.max(1, cpus().length / 2 - 1);

@@ -6,7 +6,7 @@ import { isCurrentDisplayedFeed, unselectCurrentFeed, expandMainContent, retract
 import { clearCache, articlesCache } from '../data/FeedCache.js';
 import { feedsLogger as logger } from '../../logger.js';
 import { updateFeedElementStyles } from '../../domUtils.js';
-import { clearGraph } from '../../Graph/visualizeGraph.js';
+import { clearGraph } from '../../Graph/graphologySigma.js';
 
 
 const selectAllButton = document.querySelector('#selectAllButton');

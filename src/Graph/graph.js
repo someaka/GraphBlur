@@ -2,12 +2,12 @@ import { graphLogger as logger } from '../logger.js';
 
 logger.log('This is a log message from graph.js');
 
-
 import {
     visualizeGraph,
     clearGraph
-} from "./visualizeGraph.js";
-import { DEFAULT_HEIGHT, DEFAULT_WIDTH } from '../ForceAtlas2/forceAtlas.js';
+} from "./graphologySigma.js";
+
+import { DEFAULT_HEIGHT, DEFAULT_WIDTH } from '../ForceAtlas2/forceAtlasCalculation.js';
 
 let articlesCache, similarityMatrix;
 let negativeEdges = false; // Assuming this is the default value
@@ -21,73 +21,52 @@ function setNegativeEdges(value) {
 
 
 
-function initializeGraphElements(nodes, links, width = DEFAULT_WIDTH, height = DEFAULT_WIDTH) {
-    // Check if width and height are numbers
-    if (typeof width !== 'number' || isNaN(width)) {
-        logger.error('Width is not a number:', width);
-        width = DEFAULT_WIDTH; // Set a default width if invalid
-    }
-    if (typeof height !== 'number' || isNaN(height)) {
-        logger.error('Height is not a number:', height);
-        height = DEFAULT_WIDTH; // Set a default height if invalid
-    }
-
-    // Default initialization values for nodes
-    const defaultX = width / 2;
-    const defaultY = height / 2;
-    const defaultVx = 0;
-    const defaultVy = 0;
-
-    // Initialize node properties with slight randomization to avoid zero distance
-    nodes.forEach(node => {
-        node.x = typeof node.x === 'number' && !isNaN(node.x) ? node.x : defaultX + (Math.random() - 0.5) * 10;
-        node.y = typeof node.y === 'number' && !isNaN(node.y) ? node.y : defaultY + (Math.random() - 0.5) * 10;
-        node.vx = typeof node.vx === 'number' && !isNaN(node.vx) ? node.vx : defaultVx;
-        node.vy = typeof node.vy === 'number' && !isNaN(node.vy) ? node.vy : defaultVy;
-    });
-
-    // // Log the node properties to confirm they are set correctly
-    // nodes.forEach(node => {
-    //     logger.log(`Node initialized: ${JSON.stringify(node)}`);
-    // });
-
-    // Default initialization value for link weights
-    const defaultWeight = 1;
-
-    // Initialize link weights
-    links.forEach(link => {
-        link.weight = typeof link.weight === 'number' && !isNaN(link.weight) ? link.weight : defaultWeight;
-    });
-}
-
-
 
 
 function constructGraphData(articles, dimensions = { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT }) {
-    // Create nodes for each article
-    const nodes = articles.map(article => ({
+    const nodes = articlesToNodes(articles, dimensions);
+    const links = articlesToLinks(nodes);
+    return { nodes, links };
+}
+
+function articlesToNodes(articles, dimensions) {
+    const { width, height } = validateDimensions(dimensions);
+    return articles.map(article => ({
         id: article.id,
         title: article.title,
         color: article.feedColor,
+        x: width / 2 + (Math.random() - 0.5) * 10,
+        y: height / 2 + (Math.random() - 0.5) * 10,
+        vx: 0,
+        vy: 0,
+        degree : 0,
+        mass : 0
     }));
+}
 
-    // Initialize nodes and set default positions and velocities
-    initializeGraphElements(nodes, [], dimensions.width, dimensions.height);
-
-    // Now create links between all nodes (initially without weights)
+function articlesToLinks(nodes) {
     const links = [];
     for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
-            const link = {
-                source: nodes[i], // Direct reference to the source node object
-                target: nodes[j], // Direct reference to the target node object
-                weight: 0.1 // Initialize with a default weight of 1
-            };
-            links.push(link);
+            links.push({
+                source: nodes[i],
+                target: nodes[j],
+                weight: 0
+            });
         }
     }
+    return links;
+}
 
-    return { nodes, links };
+function validateDimensions({ width, height }) {
+    return {
+        width: isValidNumber(width) ? width : DEFAULT_WIDTH,
+        height: isValidNumber(height) ? height : DEFAULT_HEIGHT
+    };
+}
+
+function isValidNumber(value) {
+    return typeof value === 'number' && !isNaN(value);
 }
 
 
@@ -136,32 +115,42 @@ async function updateGraphForSelectedFeeds(newArticlesCache = null, newSimilarit
     logger.log('All articles:', allArticles);
 
     if (allArticles.length > 0) {
-        const graphData = constructGraphData(allArticles);
-        logger.log('Graph dataa:', graphData);
-
-        // If a similarity matrix is provided, update the weights of the edges
-        if (similarityMatrix) {
-            logger.log("negative edges: ", negativeEdges);
-
-            // Extract weights from graphData.links before update and log them
-            const weightsBeforeUpdate = graphData.links.map(link => ({ source: link.source.id, target: link.target.id, weight: link.weight }));
-            logger.log('Graph data before similarity matrix update:');
-            logger.table(weightsBeforeUpdate);
-
-            updateGraphEdgesWithSimilarityMatrix(graphData, similarityMatrix, !negativeEdges);
-            graphData.links = negativeEdges ? graphData.links : filterEdgesByPercentile(graphData.links, 0.5);
-
-            // Extract weights from graphData.links after update and log them
-            const weightsAfterUpdate = graphData.links.map(link => ({ source: link.source.id, target: link.target.id, weight: link.weight }));
-            logger.log('Graph data after similarity matrix update:');
-            logger.table(weightsAfterUpdate);            
-            
-        }
-
-        logger.log('Graph dataB:', graphData);
-        visualizeGraph(graphData);
+        updateVisualization(allArticles);
     } else {
         clearGraph();
+    }
+}
+
+
+
+function updateVisualization(allArticles) {
+    const graphData = constructGraphData(allArticles);
+    logger.log('Graph dataa:', graphData);
+
+    checkAndLogSimilarityMatrix(graphData);
+
+    logger.log('Graph dataB:', graphData);
+    visualizeGraph(graphData);
+}
+
+function checkAndLogSimilarityMatrix(graphData) {
+    // If a similarity matrix is provided, update the weights of the edges
+    if (similarityMatrix) {
+        logger.log("negative edges: ", negativeEdges);
+
+        // Extract weights from graphData.links before update and log them
+        const weightsBeforeUpdate = graphData.links.map(link => ({ source: link.source.id, target: link.target.id, weight: link.weight }));
+        logger.log('Graph data before similarity matrix update:');
+        logger.table(weightsBeforeUpdate);
+
+        updateGraphEdgesWithSimilarityMatrix(graphData, similarityMatrix, !negativeEdges);
+        graphData.links = negativeEdges ? graphData.links : filterEdgesByPercentile(graphData.links, 0.5);
+
+        // Extract weights from graphData.links after update and log them
+        const weightsAfterUpdate = graphData.links.map(link => ({ source: link.source.id, target: link.target.id, weight: link.weight }));
+        logger.log('Graph data after similarity matrix update:');
+        logger.table(weightsAfterUpdate);
+
     }
 }
 

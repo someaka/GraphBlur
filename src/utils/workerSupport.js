@@ -1,6 +1,6 @@
 import { Worker } from 'worker_threads';
 import { EventEmitter } from 'events'; // Corrected import
-import { WORKER_PATH } from './similarityConfig.js';
+import { WORKER_PATH } from '../Simil/similarityConfig.js';
 import { similLogger as logger } from '../logger.js';
 
 

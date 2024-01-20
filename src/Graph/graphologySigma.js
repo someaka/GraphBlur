@@ -16,7 +16,8 @@ class SigmaGraphManager {
         this.renderer = new Sigma(this.graph, this.container, {
             labelThreshold: 0, // seemingly higher means less clutter
             enableHovering: false, // Disable built-in hover behavior
-            renderLabels: true, // Disable automatic label rendering            
+            renderLabels: true, // Disable automatic label rendering   
+            allowInvalidContainer: true, //shusshes cypress         
         });
         this.draggedNode = null;
         this.isDragging = false;

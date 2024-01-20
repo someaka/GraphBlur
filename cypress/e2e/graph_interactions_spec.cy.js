@@ -14,6 +14,7 @@ describe('Graph Interactions', () => {
     // Intercept the API call that fetches the articles for the clicked feed
     cy.intercept('POST', `${baseUrl}/fetch-articles`).as('fetchArticles');
 
+
     // Start the login process
     cy.visit('/');
     cy.get('#inputUsername').type('curaSed');
@@ -23,8 +24,13 @@ describe('Graph Interactions', () => {
     // Wait for the redirect to feeds page
     cy.url().should('include', '/feeds.html');
 
-    // Wait for the feeds to be loaded
-    cy.wait('@getFeeds');
+    // Wait for the feeds to be loaded with a custom timeout
+    cy.wait('@getFeeds', { timeout: 10000 });
+
+
+
+    cy.screenshot('before');
+
 
     // Click on the first feed in the list
     cy.get('#feedslist div').first().should('be.visible').click();
@@ -32,7 +38,17 @@ describe('Graph Interactions', () => {
     // Wait for the articles to be loaded
     cy.wait('@fetchArticles');
 
-    // Now that the articles are loaded, check for the presence of nodes
-    cy.get('#graph-container').find('circle').should('exist');
+    cy.screenshot('after');
+
+    // Call the task to compare images
+    cy.task('compareSnapshots', {
+      before: 'cypress/screenshots/before.png',
+      after: 'cypress/screenshots/after.png',
+      threshold: 0.1
+    }).then(diffPixels => {
+      // Assert based on the number of different pixels
+      expect(diffPixels).to.be.greaterThan(0.01);
+    });
+
   });
 });

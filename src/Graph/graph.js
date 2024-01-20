@@ -7,7 +7,8 @@ import {
     clearGraph
 } from "./graphologySigma.js";
 
-import { DEFAULT_HEIGHT, DEFAULT_WIDTH } from '../ForceAtlas2/forceAtlasCalculation.js';
+const DEFAULT_WIDTH = 800;
+const DEFAULT_HEIGHT = 600;
 
 let articlesCache, similarityMatrix;
 let negativeEdges = false; // Assuming this is the default value

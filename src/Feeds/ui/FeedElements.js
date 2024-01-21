@@ -26,8 +26,8 @@ async function createFeedElement(feedData, feedIndex, totalFeeds) {
     const isBlue = feedIndex % 2 === 0;
     const colorIndex = Math.floor(feedIndex / 2);
     const hue = isBlue
-        ? hueBlueStart + (colorIndex * stepSizeBlue)
-        : hueGreenStart + (colorIndex * stepSizeGreen);
+        ? hueBlueStart + (colorIndex * stepSizeBlue) % 360
+        : hueGreenStart + (colorIndex * stepSizeGreen) % 360;
 
     // Create a pastel color with the calculated hue
     const saturation = 60; // Saturation for pastel colors

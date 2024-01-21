@@ -3,6 +3,7 @@ import Sigma from "sigma";
 import chroma from "chroma-js";
 import { v4 as uuid } from "uuid";
 import ForceSupervisor from "graphology-layout-force/worker";
+import { pointArticleFromNode } from "../Feeds/ui/FeedUI";
 // import ForceSupervisor from 'graphology-layout-forceatlas2/worker';
 
 class SigmaGraphManager {
@@ -29,7 +30,7 @@ class SigmaGraphManager {
             adjustSizes: true, // Nodes do not overlap
             barnesHutOptimize: true,
             barnesHutTheta: 1.2,
-            repulsionStrength: 50, // Lower this value to reduce repulsion
+            repulsionStrength: 100, // Lower this value to reduce repulsion
         };
 
         this.startLayout();
@@ -71,6 +72,12 @@ class SigmaGraphManager {
         // Disable the autoscale at the first down interaction
         this.renderer.getMouseCaptor().on("mousedown", () => {
             if (!this.renderer.getCustomBBox()) this.renderer.setCustomBBox(this.renderer.getBBox());
+        });
+
+
+        this.renderer.on('clickNode', (e) => {
+            console.log('Node clicked:', e.node);
+            this.updateRightPanelWithFeed(e.node);
         });
 
 
@@ -121,6 +128,14 @@ class SigmaGraphManager {
     }
 
 
+    updateRightPanelWithFeed(nodeId) {
+        // console.log('Node clicked:', nodeId);
+        const nodeData = this.graph.getNodeAttributes(nodeId);
+        const hslColorString = nodeData.colorhsl;
+        pointArticleFromNode(hslColorString, nodeId);
+    }
+
+
     // showTooltip(label, { x, y }, color) {
     //     const tooltip = document.getElementById('tooltip');
     //     tooltip.innerHTML = label;
@@ -163,13 +178,24 @@ class SigmaGraphManager {
         const saturation = parseFloat(hslMatch[2]);
         const lightness = parseFloat(hslMatch[3]);
 
-        console.log("Hue:", hue, "Saturation:", saturation, "Lightness:", lightness);
+        // console.log("Hue:", hue, "Saturation:", saturation, "Lightness:", lightness);
 
         // Use Chroma.js to construct a valid HSL color
         const hslColor = chroma.hsl(hue, saturation / 100, lightness / 100).css();
         return hslColor;
     }
 
+    getStringFromColor(color) {
+        // Convert the Chroma.js color object to HSL and destructure it into components
+        const [hue, saturation, lightness] = chroma(color).hsl();
+    
+        // Normalize the hue to be between 0 and 360
+        const normalizedHue = hue % 360;
+    
+        // Construct a valid HSL color string
+        const hslColorString = `hsl(${normalizedHue}, ${saturation * 100}%, ${lightness * 100}%)`;
+        return hslColorString;
+    }
 
     // Update the getNodeAttributes method to use the new color conversion
     getNodeAttributes(node) {
@@ -178,6 +204,7 @@ class SigmaGraphManager {
             y: node.y,
             size: node.size || 10,
             color: this.getColorFromString(node.color),
+            colorhsl : node.color,
             label: node.title,
             title: node.title
         };
@@ -296,11 +323,9 @@ class SigmaGraphManager {
 
                 // Calculate the average color of the two nodes
                 const averageColor = chroma.mix(sourceColor, targetColor, 0.5, 'rgb').hex();
-
                 this.graph.addEdgeWithKey(edgeKey, sourceId, targetId, {
                     size: link.size || 1,
-                    color: averageColor, // Use the average color for the edge
-                    // ... other edge attributes ...
+                    color: averageColor,
                 });
             }
         });

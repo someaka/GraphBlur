@@ -19,7 +19,31 @@ function toggleFeedElement(feedElement, originalColor) {
     feedElement.style.boxShadow = feedElement.classList.contains('clicked') ? 'inset 0 0 5px rgba(0,0,0,0.3)' : '';
 }
 
+function pointArticleFromNode(color, articleId) {
+    // Find the feed element with the matching color
+    const selectedFeedElements = document.querySelectorAll('#feedslist div.clicked');
+    const feedElements = Array.from(selectedFeedElements);
+    const feedElement = feedElements.find(el => el.dataset.originalColor === color);
 
+    if (feedElement) {
+        // Create a fake feedData object with just an id
+        const feedData = { id: feedElement.id };
+        // Display the articles for the feed in the right panel
+        displayArticles(feedData).then(() => {
+            // Scroll to the article after a slight delay to allow for DOM rendering
+            setTimeout(() => {
+                // Use the article ID to find the article element
+                const articleElement = document.getElementById(`article-${articleId}`);
+                console.log("articleElement", articleElement)
+                if (articleElement) {
+                    articleElement.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 100); // Adjust the delay as needed
+        });
+    } else {
+        console.error('No feed element found for color:', color);
+    }
+}
 
 async function displayArticles(feedData) {
     // Clear previous articles and graph
@@ -32,6 +56,7 @@ async function displayArticles(feedData) {
 
     // Display articles in the articles element
     const articles = articlesCache[feedData.id];
+    //console.log("articles:", articles);
 
     // Check if articles is an array before calling forEach
     if (!Array.isArray(articles)) {
@@ -44,6 +69,9 @@ async function displayArticles(feedData) {
         articleContainer.classList.add('article-container');
 
         if (articleData && articleData.article) {
+            //console.log("articleData:", articleData);
+            articleContainer.id = `article-${articleData.id}`;
+
             const titleElement = document.createElement('h2');
             titleElement.textContent = articleData.article.title;
             articleContainer.appendChild(titleElement);
@@ -70,7 +98,10 @@ const articleTemplate = document.querySelector('#articleTemplate');
 
 function updateArticlesUI(article) {
     // Check if an article container for this UUID already exists
+    //broken ?
     const articleElement = articlesElement.querySelector(`.article[data-id="${article.id}"]`);
+    console.log("updated article element :", articleElement, "article id:", article.id);
+
     if (articleElement) {
         // Article already exists, update its content
         const contentElement = articleElement.querySelector('.content');
@@ -91,9 +122,11 @@ function updateArticlesUI(article) {
 }
 
 
-export { 
-    toggleMainContent, 
-    toggleFeedElement, 
+
+export {
+    toggleMainContent,
+    toggleFeedElement,
     displayArticles,
-    updateArticlesUI
+    updateArticlesUI,
+    pointArticleFromNode
 };

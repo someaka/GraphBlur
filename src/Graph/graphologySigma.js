@@ -6,6 +6,9 @@ import ForceSupervisor from "graphology-layout-force/worker";
 import { pointArticleFromNode } from "../Feeds/ui/FeedUI";
 // import ForceSupervisor from 'graphology-layout-forceatlas2/worker';
 
+
+
+
 class SigmaGraphManager {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
@@ -18,7 +21,10 @@ class SigmaGraphManager {
             labelThreshold: 0, // seemingly higher means less clutter
             enableHovering: false, // Disable built-in hover behavior
             renderLabels: true, // Disable automatic label rendering   
-            allowInvalidContainer: true, //shusshes cypress         
+            allowInvalidContainer: true, //shusshes cypress
+            // nodeProgramClasses: {
+            //     border: NodeProgramBorder,
+            // },
         });
         this.draggedNode = null;
         this.isDragging = false;
@@ -188,10 +194,10 @@ class SigmaGraphManager {
     getStringFromColor(color) {
         // Convert the Chroma.js color object to HSL and destructure it into components
         const [hue, saturation, lightness] = chroma(color).hsl();
-    
+
         // Normalize the hue to be between 0 and 360
         const normalizedHue = hue % 360;
-    
+
         // Construct a valid HSL color string
         const hslColorString = `hsl(${normalizedHue}, ${saturation * 100}%, ${lightness * 100}%)`;
         return hslColorString;
@@ -204,9 +210,12 @@ class SigmaGraphManager {
             y: node.y,
             size: node.size || 10,
             color: this.getColorFromString(node.color),
-            colorhsl : node.color,
+            // borderColor: chroma(data.color).darken().hex(),
+            // borderSize: 2,
+            // type: "border",
+            colorhsl: node.color,
             label: node.title,
-            title: node.title
+            title: node.title,
         };
     }
 
@@ -322,7 +331,7 @@ class SigmaGraphManager {
                 const targetColor = this.graph.getNodeAttribute(targetId, 'color');
 
                 // Calculate the average color of the two nodes
-                const averageColor = chroma.mix(sourceColor, targetColor, 0.5, 'rgb').hex();
+                const averageColor = chroma.mix(sourceColor, targetColor, 0.5, 'rgb').brighten(0.77).hex();
                 this.graph.addEdgeWithKey(edgeKey, sourceId, targetId, {
                     size: link.size || 1,
                     color: averageColor,

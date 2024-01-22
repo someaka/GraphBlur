@@ -8,9 +8,11 @@ on:
     branches:
       - main
 
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout main branch
         uses: actions/checkout@v3
@@ -34,10 +36,11 @@ jobs:
         with:
           ref: glitch
 
-      - name: Copy build artifacts to Glitch branch
+      - name: Add build artifacts to Glitch branch
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
+          git add dist -f
           git add -A
           git commit -m "Add build artifacts"
 

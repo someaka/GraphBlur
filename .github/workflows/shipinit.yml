@@ -18,7 +18,7 @@ jobs:
       - name: Sync with Glitch
         uses: wei/git-sync@v3.0.0
         with:
-          source_repo: https://${{ secrets.GITHUB_TOKEN }}@/github.com/someaka/graphblur.git
+          source_repo: https://${{ secrets.GITHUB_TOKEN }}@github.com/someaka/graphblur.git
           source_branch: "glitch"
           destination_repo: ${{ secrets.GLITCH_GIT_URL }}
           destination_branch: "master"

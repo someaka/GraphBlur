@@ -1,26 +1,22 @@
 name: Deploy to Glitch
 
 on:
-  workflow_run:
-    workflows: ["Deploy to Glitch branch"] # Name of the workflow that triggers this one
-    types:
-      - completed
+  push:
     branches:
       - glitch
   workflow_dispatch:
-
+    
 jobs:
   sync-with-glitch:
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    steps:
+      runs-on: ubuntu-latest
+      steps:
       - name: Checkout the code
         uses: actions/checkout@v3
         with:
           ref: 'glitch' # The branch you want to deploy
         
       - name: Sync with Glitch
-        uses: wei/git-sync@v3
+        uses: wei/git-sync@v3.0.0
         with:
           source_repo: https://${{ secrets.GITHUB_TOKEN }}@/github.com/someaka/graphblur.git
           source_branch: "glitch"

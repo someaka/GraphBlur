@@ -25,13 +25,13 @@ eventSourceArticles.onerror = (error) => {
     logger.error('Error with event source for articles:', error);
 };
 
-eventSource.addEventListener('similarityMatrixUpdate', (event) => {
+eventSource.addEventListener('similarityPairsUpdate', (event) => {
     try {
-        const similarityMatrix = JSON.parse(event.data);
-        // logger.log("received similarityMatrixUpdate", similarityMatrix);
-        updateGraphForSelectedFeeds(articlesCache, similarityMatrix);
+        const similarityPairs = JSON.parse(event.data);
+        // logger.log("received similarityPairsUpdate", similarityPairs);
+        updateGraphForSelectedFeeds(articlesCache, similarityPairs);
     } catch (error) {
-        logger.error('Error parsing similarity matrix data:', error);
+        logger.error('Error parsing similarity Pairs data:', error);
     }
 });
 

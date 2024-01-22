@@ -10,7 +10,7 @@ import {
 const DEFAULT_WIDTH = 800;
 const DEFAULT_HEIGHT = 600;
 
-let articlesCache, similarityMatrix;
+let articlesCache, similarityPairs;
 let negativeEdges = false; // Assuming this is the default value
 
 // Setter function for negativeEdges
@@ -86,9 +86,9 @@ function filterEdgesByPercentile(edges, percentile = 0.2) {
 
 
 
-async function updateGraphForSelectedFeeds(newArticlesCache = null, newSimilarityMatrix = null) {
+async function updateGraphForSelectedFeeds(newArticlesCache = null, newSimilarityPairs = null) {
     articlesCache = newArticlesCache || articlesCache;
-    similarityMatrix = newSimilarityMatrix || similarityMatrix;
+    similarityPairs = newSimilarityPairs || similarityPairs;
 
     logger.log('Articles cache:', articlesCache); // Log the entire articlesCache
 
@@ -128,28 +128,28 @@ function updateVisualization(allArticles) {
     const graphData = constructGraphData(allArticles);
     logger.log('Graph dataa:', graphData);
 
-    checkAndLogSimilarityMatrix(graphData);
+    checkAndLogSimilarityPairs(graphData);
 
     logger.log('Graph dataB:', graphData);
     visualizeGraph(graphData);
 }
 
-function checkAndLogSimilarityMatrix(graphData) {
-    // If a similarity matrix is provided, update the weights of the edges
-    if (similarityMatrix) {
+function checkAndLogSimilarityPairs(graphData) {
+    // If a similarity Pairs is provided, update the weights of the edges
+    if (similarityPairs) {
         logger.log("negative edges: ", negativeEdges);
 
         // Extract weights from graphData.links before update and log them
         const weightsBeforeUpdate = graphData.links.map(link => ({ source: link.source.id, target: link.target.id, weight: link.weight }));
-        logger.log('Graph data before similarity matrix update:');
+        logger.log('Graph data before similarity Pairs update:');
         logger.table(weightsBeforeUpdate);
 
-        updateGraphEdgesWithSimilarityMatrix(graphData, similarityMatrix, !negativeEdges);
+        updateGraphEdgesWithSimilarityPairs(graphData, similarityPairs, !negativeEdges);
         graphData.links = negativeEdges ? graphData.links : filterEdgesByPercentile(graphData.links, 0.5);
 
         // Extract weights from graphData.links after update and log them
         const weightsAfterUpdate = graphData.links.map(link => ({ source: link.source.id, target: link.target.id, weight: link.weight }));
-        logger.log('Graph data after similarity matrix update:');
+        logger.log('Graph data after similarity Pairs update:');
         logger.table(weightsAfterUpdate);
 
     }
@@ -160,22 +160,15 @@ function normalizeEdgeWeight(edgeWeight) {
     return (edgeWeight + 1) / 2;
 }
 
-function updateGraphEdgesWithSimilarityMatrix(graphData, similarityMatrix, normalize = true) {
-    // Create a map from node IDs to their indices
-    const idToIndexMap = new Map(graphData.nodes.map((node, index) => [node.id, index]));
-
-    // Update the weights of the edges using the similarity matrix
+function updateGraphEdgesWithSimilarityPairs(graphData, similarityPairs, normalize = true) {
+    // Update the weights of the edges using the similarity Pairs
     graphData.links.forEach(link => {
-        const sourceIndex = idToIndexMap.get(link.source.id);
-        const targetIndex = idToIndexMap.get(link.target.id);
+        const pairKey = `${link.source.id}-${link.target.id}`;
+        const reversePairKey = `${link.target.id}-${link.source.id}`;
+        const similarityScore = similarityPairs[pairKey] || similarityPairs[reversePairKey];
 
-        if (sourceIndex !== undefined && targetIndex !== undefined &&
-            similarityMatrix[sourceIndex] && similarityMatrix[targetIndex] &&
-            typeof similarityMatrix[sourceIndex][targetIndex] === 'number') {
-
-            const edgeWeight = similarityMatrix[sourceIndex][targetIndex];
-            link.weight = normalize ? normalizeEdgeWeight(edgeWeight) : edgeWeight;
-
+        if (typeof similarityScore === 'number') {
+            link.weight = normalize ? normalizeEdgeWeight(similarityScore) : similarityScore;
         } else {
             // Set a default weight of 0 for invalid links
             link.weight = 0;

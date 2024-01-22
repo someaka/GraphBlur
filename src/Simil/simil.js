@@ -2,6 +2,7 @@ import { similLogger as logger } from '../logger.js';
 import { getEmbeddings } from './similarityInteraction.js';
 import { createWorkerPool, terminateWorkerPool } from '../utils/workerSupport.js';
 import { cpus } from 'os';
+import { articleCache } from '../server/articles.js';
 
 const numCPUs = Math.max(1, cpus().length / 2 - 1);
 
@@ -30,11 +31,15 @@ function initializeSimilarityMatrix(size) {
 }
 
 async function createSimilarityMatrix(articles) {
+    
     logger.log(`Starting to get embeddings for ${articles.length} articles.`);
     validateArticles(articles);
+
     const texts = extractTextsFromArticles(articles);
     const embeddings = await getEmbeddings(texts);
     logger.log("Embeddings retrieved.");
+
+    // Add embedings to articleCache for each article
 
     const similarityMatrix = initializeSimilarityMatrix(articles.length);
     const workerPool = createWorkerPool(numCPUs); // Worker pool is created here

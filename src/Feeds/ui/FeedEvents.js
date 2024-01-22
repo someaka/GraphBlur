@@ -29,7 +29,6 @@ async function selectAllFeedsActions(allFeeds, feedsData) {
 function unselectAllFeedsActions() {
     clearGraph();
     retractMainContent();
-    clearCache();
 }
 
 async function toggleAllFeeds(feedsData) {

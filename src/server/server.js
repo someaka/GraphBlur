@@ -10,7 +10,7 @@ dotenv.config();
 
 import { login } from './auth.js';
 import { fetchFeeds, fetchStories, saveSessionCookie, loadSessionCookie } from './serverFeedsFetching.js';
-import { calculateAndSendSimilarityMatrix, articleUpdateEmitter } from './events.js';
+import { calculateAndSendSimilarityPairs, articleUpdateEmitter } from './events.js';
 import { articleCache, fetchArticlesWithContentForFeeds } from './articles.js';
 
 
@@ -116,8 +116,8 @@ server.post('/fetch-articles', async (req, res) => {
     // Combine new articles with cached articles for similarity calculation
     const allArticlesWithContent = [...newArticlesWithContent, ...cachedArticles];
 
-    // Call the similarity matrix calculation function with all articles
-    calculateAndSendSimilarityMatrix(clients, allArticlesWithContent);
+    // Call the similarity Pairs calculation function with all articles
+    calculateAndSendSimilarityPairs(clients, allArticlesWithContent);
   } catch (error) {
     logger.error('Error fetching articles:', error);
     res.status(500).json({ error: 'Internal server error' });

@@ -6,14 +6,7 @@
   "main": "server.js",
   "scripts": {
     "build": "vite build",
-    "start": "cross-env NODE_ENV=production node src/server/server.js",
-    "start:dev": "npm-run-all --parallel start:vite start:server",
-    "start:vite": "vite",
-    "start:server": "nodemon src/server/server.js",
-    "cy:open": "cypress open",
-    "test:prod:interactive": "cross-env NODE_ENV=production start-server-and-test \"cross-env NODE_ENV=production npm run start\" http://localhost:3000 \"cypress open --env NODE_ENV=production\"",
-    "test:prod": "cross-env NODE_ENV=production start-server-and-test \"cross-env NODE_ENV=production npm run start\" http://localhost:3000 \"npx cypress run --env NODE_ENV=production --headless\"",
-    "dev": "start-server-and-test 'npm-run-all --parallel start:vite start:server' http://localhost:3000 cy:open"
+    "start": "cross-env NODE_ENV=production node src/server/server.js"
   },
   "dependencies": {
     "@extractus/article-extractor": "^8.0.4",

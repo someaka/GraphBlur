@@ -14,10 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - name: Checkout main branch
+      - name: Checkout Glitch branch
         uses: actions/checkout@v3
         with:
-          ref: main
+          ref: glitch
 
       - name: Use Node.js (match Glitch's version)
         uses: actions/setup-node@v1
@@ -29,13 +29,14 @@ jobs:
 
       - name: Build project
         run: npm run build
+      
+      - name: Debugging - List contents of the dist directory
+        run: |
+          echo "Listing contents of the dist directory:"
+          ls -la dist/
+          echo "Current working directory:"
+          pwd
   
-
-      - name: Checkout Glitch branch
-        uses: actions/checkout@v3
-        with:
-          ref: glitch
-
       - name: Add build artifacts to Glitch branch
         run: |
           git config user.name "GitHub Actions"

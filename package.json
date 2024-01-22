@@ -41,15 +41,10 @@
     "ws": "^8.16.0"
   },
   "devDependencies": {
-    "@simonsmith/cypress-image-snapshot": "^9.0.1",
     "@types/chroma-js": "^2.4.3",
     "cross-env": "^7.0.3",
-    "cypress": "^13.6.3",
-    "eslint-plugin-cypress": "^2.15.1",
     "nodemon": "^3.0.2",
     "npm-run-all": "^4.1.5",
-    "pixelmatch": "^5.3.0",
-    "pngjs": "^7.0.0",
     "start-server-and-test": "^2.0.3",
     "vite": "^5.0.11"
   }

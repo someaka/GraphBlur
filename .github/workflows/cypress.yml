@@ -1,6 +1,11 @@
 name: Cypress Tests
 on:
   push:
+    branches-ignore:
+      - glitch
+  pull_request:
+    branches-ignore:
+      - glitch
   workflow_dispatch:
 jobs:
   cypress-run-dev:

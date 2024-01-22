@@ -1,0 +1,51 @@
+name: Deploy to Glitch branch
+
+on:
+  workflow_run:
+    workflows: ["Cypress Tests"]
+    types:
+      - completed
+    branches:
+      - main
+    branches-ignore:
+      - glitch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v3
+        with:
+          ref: main
+
+      - name: Use Node.js (match Glitch's version)
+        uses: actions/setup-node@v1
+        with:
+          node-version: '16.x' # Replace with the Node.js version Glitch is using
+  
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+  
+
+      - name: Checkout Glitch branch
+        uses: actions/checkout@v3
+        with:
+          ref: glitch
+
+      - name: Copy build artifacts to Glitch branch
+        run: |
+          # Assuming build artifacts are in the 'dist' directory
+          cp -R dist/* ./
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add -A
+          git commit -m "Add build artifacts"
+
+      - name: Push to Glitch branch
+        run: git push origin glitch --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

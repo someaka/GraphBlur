@@ -7,8 +7,6 @@ on:
       - completed
     branches:
       - main
-    branches-ignore:
-      - glitch
 
 jobs:
   deploy:

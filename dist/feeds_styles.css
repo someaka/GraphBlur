@@ -1,0 +1,274 @@
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    /* Light grey border */
+    border-top-color: #09f;
+    /* Blue color for the top bordr */
+    border-radius: 50%;
+    /* Circular border */
+    width: 50px;
+    /* Width of the spinner */
+    height: 50px;
+    /* Height of the spinner */
+    position: fixed;
+    /* Fixed position */
+    top: 50%;
+    /* Center vertically */
+    left: 50%;
+    /* Center horizontally */
+    transform: translate(-50%, -50%);
+    /* Offset the spinner to truly center it */
+    animation: spin 1s linear infinite;
+    /* Spin animation */
+}
+
+@keyframes spin {
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+#container {
+    display: flex;
+}
+
+#feedsContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    flex: 0 0 400px;
+    height: 100vh;
+    /* Set the height to the full viewport height */
+    overflow-y: auto;
+    /* Enable vertical scrolling */
+}
+
+#graphcontent {
+    flex: 1;
+    /* Assign a flex-grow value to control the width */
+    /* Additional styles */
+    z-index: 15;
+    /* higher than the right panel */
+
+}
+
+#graph-container {
+    height: 100vh;
+    /* Full height of the viewport */
+    /* width: 100vw; Full width of the viewport */
+    z-index: 16;
+    /* higher than the right panel */
+
+}
+
+#maincontent {
+    position: relative;
+    top: 0;
+    right: -40%;
+    /* Start off-screen to the right */
+    width: 40%;
+    height: 100vh;
+    /* Set the height to the full viewport height */
+    overflow-y: auto;
+    /* Enable vertical scrolling */
+    transition: right 0.5s ease;
+    z-index: 10;
+}
+
+.panel_overlay {
+    right: 0;
+    /* Bring the overlay panel on-screen */
+}
+
+#feedslist {
+    list-style: none;
+    padding: 0;
+}
+
+.article {
+    border-bottom: 1px solid #ccc;
+    padding: 10px 0;
+}
+
+.title {
+    font-size: 18px;
+    margin-bottom: 5px;
+}
+
+.text {
+    font-size: 14px;
+    color: #555;
+}
+
+#selectAllButton {
+    width: calc(100% - 0px);
+    /* Adjust the width as needed, subtracting any padding */
+    margin: 0 auto;
+    /* Auto margins for horizontal centering */
+    display: none;
+    /* Use block display */
+    /* Other styles for the button */
+}
+
+#maincontent .spinner.center-in-maincontent {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+
+
+.slider-container {
+    margin-bottom: 20px;
+}
+
+.range-slider {
+    position: relative;
+    width: 100%;
+}
+
+.slider {
+    -webkit-appearance: none;
+    /* Override default appearance for WebKit browsers */
+    appearance: none;
+    /* Standard syntax: Override default appearance for all browsers */
+    width: 100%;
+    /* Full-width */
+    height: 2px;
+    /* Specified height */
+    background: #ddd;
+    /* Grey background */
+    outline: none;
+    /* Remove outline */
+    opacity: 0.7;
+    /* Set transparency (for mouse-over effects on hover) */
+    -webkit-transition: .2s;
+    /* 0.2 seconds transition on hover for WebKit browsers */
+    transition: opacity .2s;
+}
+
+.slider:hover {
+    opacity: 1;
+    /* Fully opaque on hover */
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    /* Override default look */
+    appearance: none;
+    width: 25px;
+    /* Set a specific slider handle width */
+    height: 25px;
+    /* Slider handle height */
+    background: #4CAF50;
+    /* Green background */
+    cursor: pointer;
+    /* Cursor on hover */
+}
+
+.slider::-moz-range-thumb {
+    width: 25px;
+    /* Set a specific slider handle width */
+    height: 25px;
+    /* Slider handle height */
+    background: #4CAF50;
+    /* Green background */
+    cursor: pointer;
+    /* Cursor on hover */
+}
+
+.slider-min-max {
+    display: flex;
+    justify-content: space-between;
+    font-size: small;
+}
+
+.slider-min,
+.slider-max {
+    color: #888;
+}
+
+.output {
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: small;
+}
+
+.slider-explanation {
+    font-size: smaller;
+    color: #999;
+    /* Lighter shade of grey */
+}
+
+
+
+
+
+
+
+
+
+/* Custom toggle switch */
+.custom-toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    /* Width of the switch */
+    height: 24px;
+    /* Height of the switch */
+}
+
+.custom-toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.custom-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.custom-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked+.custom-toggle-slider {
+    background-color: #2196F3;
+}
+
+input:checked+.custom-toggle-slider:before {
+    transform: translateX(26px);
+}
+
+/* Add this to your CSS file or within a <style> tag in your HTML */
+.sigma-mouse-enabled :hover {
+    cursor: default !important;
+}
+
+#tooltip {
+    position: absolute;
+    pointer-events: none; /* Ignore all pointer events */
+    /* ... other styles ... */
+}

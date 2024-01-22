@@ -1,0 +1,131 @@
+body {
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    max-width: 600px;
+    margin: auto;
+    padding: 20px;
+}
+
+#formLogin {
+    display: grid;
+    grid-template-columns: 1fr 3fr; /* Label and input/status message */
+    gap: 10px; /* Space between grid items */
+    align-items: center; /* Align items vertically */
+}
+
+.form-group label,
+.action-group {
+    grid-column: 1 / 2; /* Place label and action group in the first column */
+}
+
+.form-group .form-control,
+.status-message {
+    grid-column: 2 / 3; /* Place input and status message in the second column */
+}
+
+.action-group {
+    display: flex;
+    flex-direction: column; /* Stack button and status message vertically */
+    align-items: flex-start; /* Align items to the start of the column */
+}
+
+.status-message {
+    margin-top: 10px; /* Add space between button and status message */
+}
+
+.btn {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn:hover {
+    background-color: #0056b3;
+}
+
+.status-message {
+    grid-column: 2 / 3; /* Span the status message across the second column */
+    color: red;
+    text-align: left;
+}
+
+
+/* Additional styles for feeds.html */
+
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1); /* Light grey border */
+    border-top-color: #09f; /* Blue color for the top bordr */
+    border-radius: 50%; /* Circular border */
+    width: 50px; /* Width of the spinner */
+    height: 50px; /* Height of the spinner */
+    position: fixed; /* Fixed position */
+    top: 50%; /* Center vertically */
+    left: 50%; /* Center horizontally */
+    transform: translate(-50%, -50%); /* Offset the spinner to truly center it */
+    animation: spin 1s linear infinite; /* Spin animation */
+}
+
+@keyframes spin {
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+    100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+#container {
+    display: flex;
+}
+
+#feedsContainer {
+    flex: 0 0 300px; /* Set the basis to 200px and don't allow it to grow or shrink */
+    /* Additional styles for feedsContainer */
+}
+
+#graphcontent {
+    flex: 1; /* Assign a flex-grow value to control the width */
+    /* Additional styles */
+}
+
+#maincontent {
+    /* Styles for the main content (right panel) */
+    position: absolute; /* Position it absolutely to overlay */
+    top: 0;
+    right: -100%; /* Start off-screen */
+    width: 30%; /* Width of the overlay panel */
+    height: 100%;
+    transition: right 0.5s ease; /* Animate the right property */
+    z-index: 10; /* Ensure it's on top of other content */
+}
+
+
+#feedslist {
+    list-style: none;
+    padding: 0;
+}
+
+.article {
+    border-bottom: 1px solid #ccc;
+    padding: 10px 0;
+}
+
+.title {
+    font-size: 18px;
+    margin-bottom: 5px;
+}
+
+.text {
+    font-size: 14px;
+    color: #555;
+}
+
+#selectAllButton {
+    display: none; /* Hide the button initially */
+    /* Other styles for the button */
+}

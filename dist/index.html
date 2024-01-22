@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NewsBlur Login</title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+    <!-- <link rel="manifest" href="/images/site.webmanifest"> -->
+    <link rel="stylesheet" href="/index_styles.css">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <script type="module" crossorigin src="/assets/main-ib-BN6pc.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/apiConfig-BkCDF--i.js">
+</head>
+
+<body>
+    <div class="container"> 
+        <h1>Login to NewsBlur</h1>
+        <form id="formLogin">
+            <div class="form-group">
+                <label for="inputUsername" class="form-label">Username</label>
+                <input type="text" class="form-control" id="inputUsername" placeholder="Enter username" autocomplete="on">
+            </div>
+            <div class="form-group">
+                <label for="inputPassword" class="form-label">Password</label>
+                <input type="password" class="form-control" id="inputPassword" placeholder="Password" autocomplete="on">
+            </div>
+            <button type="submit" class="btn btn-primary" id="submitButton">Submit</button>
+            <div id="loginStatusMessage" class="status-message"></div>
+        </form>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+</body>
+
+</html> 

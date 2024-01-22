@@ -7,6 +7,7 @@ on:
       - completed
     branches:
       - main
+  workflow_dispatch:
 
 
 jobs:
@@ -20,7 +21,7 @@ jobs:
           ref: glitch
 
       - name: Use Node.js (match Glitch's version)
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
         with:
           node-version: '16.x' # Replace with the Node.js version Glitch is using
   

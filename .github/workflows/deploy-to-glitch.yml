@@ -36,8 +36,6 @@ jobs:
 
       - name: Copy build artifacts to Glitch branch
         run: |
-          # Assuming build artifacts are in the 'dist' directory
-          cp -R dist/* ./
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add -A

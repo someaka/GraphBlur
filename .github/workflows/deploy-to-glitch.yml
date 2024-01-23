@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Clean dist directory
+        run: rm -rf dist/*
+
       - name: Build project
         run: npm run build
       
@@ -49,9 +52,10 @@ jobs:
           else
             echo "Changes detected."
             echo "changes_exist=true" >> $GITHUB_ENV
+          fi
 
       - name: Commit and push if changes exist
-        if: env.changes_exist == 'true'
+        if: ${{ env.changes_exist == 'true' }}
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"

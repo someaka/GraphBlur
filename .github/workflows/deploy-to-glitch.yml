@@ -37,8 +37,21 @@ jobs:
           ls -la dist/
           echo "Current working directory:"
           pwd
-  
-      - name: Add build artifacts to Glitch branch
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git status
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes to commit."
+            echo "::set-output name=changes_exist::false"
+          else
+            echo "Changes detected."
+            echo "::set-output name=changes_exist::true"
+          fi
+
+      - name: Commit and push if changes exist
+        if: steps.git-check.outputs.changes_exist == 'true'
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"

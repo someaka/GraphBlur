@@ -29,6 +29,7 @@
     "graphology-layout": "^0.6.1",
     "graphology-layout-force": "^0.2.4",
     "graphology-layout-forceatlas2": "^0.10.1",
+    "graphology-types": "^0.24.7",
     "graphology-utils": "^2.5.2",
     "open": "^10.0.2",
     "playwright": "^1.40.1",

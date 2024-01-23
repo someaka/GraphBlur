@@ -60,8 +60,9 @@ function initializeSliders() {
             const minLog = Math.log(scale.min);
             const maxLog = Math.log(scale.max);
             const scaleLog = (maxLog - minLog) / (slider.max - slider.min);
-            // Calculate position for default value (1) on a logarithmic scale
-            defaultPosition = (Math.log(1) - minLog) / scaleLog + parseFloat(slider.min);
+            // Calculate position for default value on a logarithmic scale
+            const defaultValue = parseFloat(output.textContent);
+            defaultPosition = (Math.log(defaultValue) - minLog) / scaleLog + parseFloat(slider.min);
         } else {
             // Calculate position for default value on a linear scale
             const defaultValue = parseFloat(output.textContent);
@@ -74,12 +75,11 @@ function initializeSliders() {
             updateOutput(slider, output, scale, precision, scaleType);
             // After updating the output, call the function to update the simulation settings
             updateForceSettings({
-                // Pass the new settings based on the scaled values
                 gravity: parseFloat(document.getElementById('gravityOutput').textContent),
-                scalingRatio: parseFloat(document.getElementById('scalingRatioOutput').textContent),
-                barnesHutTheta: parseFloat(document.getElementById('barnesHutThetaOutput').textContent),
-                repulsionStrength: parseFloat(document.getElementById('repulsionStrengthOutput').textContent),
-                coolingRate: parseFloat(document.getElementById('coolingRateOutput').textContent)
+                repulsion: parseFloat(document.getElementById('repulsionOutput').textContent),
+                attraction: parseFloat(document.getElementById('attractionOutput').textContent),
+                inertia: parseFloat(document.getElementById('inertiaOutput').textContent),
+                maxMove: parseFloat(document.getElementById('maxMoveOutput').textContent)
             });
         });
 
@@ -87,6 +87,7 @@ function initializeSliders() {
         updateOutput(slider, output, scale, precision, scaleType);
     });
 }
+
 
 function initializeOptions() {
     const negativeEdgesToggle = document.getElementById('negativeEdgesToggle');

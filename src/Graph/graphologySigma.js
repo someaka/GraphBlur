@@ -28,16 +28,18 @@ class SigmaGraphManager {
         });
         this.draggedNode = null;
         this.isDragging = false;
+        // TODO set up forceatlas2 and different settings for each layout
         this.settings = {
             isNodeFixed: (_, attr) => attr.highlighted,
-            strongGravityMode: false,
-            gravity: 1,
-            scalingRatio: 2,
-            adjustSizes: true, // Nodes do not overlap
-            barnesHutOptimize: true,
-            barnesHutTheta: 1.2,
-            repulsionStrength: 100, // Lower this value to reduce repulsion
+            settings: {
+                attraction: 0.0005,
+                repulsion: 0.1,
+                gravity: 0.0001,
+                inertia: 0.6,
+                maxMove: 5
+            }
         };
+        this.layout = new ForceSupervisor(this.graph, this.settings);
 
         this.startLayout();
         this.initializeInteractions();
@@ -286,7 +288,7 @@ class SigmaGraphManager {
                 const animateEdgeStrength = (startTime, nodeId) => {
                     const currentTime = Date.now();
                     const elapsedTime = currentTime - startTime;
-                    const duration = 1000; // 3 seconds
+                    const duration = 1000; // 1 second
 
                     if (elapsedTime < duration) {
                         const progress = elapsedTime / duration;
@@ -369,31 +371,26 @@ class SigmaGraphManager {
     }
 
     startLayout() {
-        console.log('Starting layout with settings:', this.settings);
-        if (this.layout) {
-            this.layout.stop();
-            console.log('Previous layout stopped.');
-        }
-        this.layout = new ForceSupervisor(this.graph, this.settings);
-        console.log('New ForceSupervisor created. with settings:', this.settings);
         this.layout.start();
-        console.log('Layout started.');
     }
 
     stopLayout() {
-        if (this.layout) {
+        if (this.layout.isRunning()) {
             this.layout.stop();
         }
     }
 
 
-    updateForceSettings(settings) {
-        // console.log("Before update:", this.settings);
-        this.stopLayout(); // Stop the existing layout
-        this.settings = { ...this.settings, ...settings }; // Update the settings
+    updateForceSettings(newSettings) {
+        this.stopLayout();
+
+        this.settings.settings = { ...this.settings.settings, ...newSettings };
+
+        this.layout = new ForceSupervisor(this.graph, this.settings);
+    
         this.startLayout();
         this.renderer.refresh();
-        // console.log("After update:", this.settings);
+        console.log('New ForceSupervisor created with settings:', this.settings);
     }
 }
 

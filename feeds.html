@@ -48,81 +48,81 @@
                     <small class="slider-explanation">Higher gravity pulls nodes closer to center, lower lets them drift
                         apart.</small>
                     <div class="range-slider">
-                        <input type="range" id="gravitySlider" min="0" max="100" value="50" class="slider"
-                            data-output="gravityOutput" data-scale-min="0.0000001" data-scale-max="10000"
-                            data-scale-factor="1" data-precision="6" data-scale-type="log">
-                        <output id="gravityOutput">1</output>
+                        <input type="range" id="gravitySlider" min="0" max="100" value="1" class="slider"
+                            data-output="gravityOutput" data-scale-min="0.00001" data-scale-max="10"
+                            data-scale-factor="1" data-precision="5" data-scale-type="log">
+                        <output id="gravityOutput">0.0001</output>
                         <div class="slider-min-max">
-                            <span class="slider-min">0.0000001</span>
-                            <span class="slider-max">10000</span>
+                            <span class="slider-min">0.00001</span>
+                            <span class="slider-max">10</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Scaling Ratio Slider -->
+                <!-- Repulsion Slider -->
                 <div class="slider-container">
-                    <label for="scalingRatioSlider">Scaling Ratio:</label>
-                    <small class="slider-explanation">Higher scaling increases repulsion for well-connected nodes, lower
-                        reduces it.</small>
+                    <label for="repulsionSlider">Repulsion:</label>
+                    <small class="slider-explanation">Higher repulsion spreads nodes further apart, lower brings them
+                        closer.</small>
                     <div class="range-slider">
-                        <input type="range" id="scalingRatioSlider" min="0" max="100" value="20" class="slider"
-                            data-output="scalingRatioOutput" data-scale-min="0" data-scale-max="2" data-scale-factor="1"
-                            data-precision="2" data-scale-type="linear">
-                        <output id="scalingRatioOutput">1.00</output>
+                        <input type="range" id="repulsionSlider" min="0" max="100" value="50" class="slider"
+                            data-output="repulsionOutput" data-scale-min="0.0001" data-scale-max="10"
+                            data-scale-factor="1" data-precision="5" data-scale-type="log">
+                        <output id="repulsionOutput">0.1</output>
                         <div class="slider-min-max">
-                            <span class="slider-min">0</span>
-                            <span class="slider-max">2</span>
+                            <span class="slider-min">0.0001</span>
+                            <span class="slider-max">10</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Barnes Hut Theta Slider -->
+                <!-- Attraction Slider -->
                 <div class="slider-container">
-                    <label for="barnesHutThetaSlider">Barnes Hut Theta:</label>
-                    <small class="slider-explanation">Higher theta speeds up simulation with less accuracy, lower theta
-                        is more precise but slower.</small>
+                    <label for="attractionSlider">Attraction:</label>
+                    <small class="slider-explanation">Higher attraction increases the force pulling connected nodes
+                        together.</small>
                     <div class="range-slider">
-                        <input type="range" id="barnesHutThetaSlider" min="0" max="100" value="60" class="slider"
-                            data-output="barnesHutThetaOutput" data-scale-min="0" data-scale-max="2"
-                            data-scale-factor="1" data-precision="2" data-scale-type="linear">
-                        <output id="barnesHutThetaOutput">1.20</output>
+                        <input type="range" id="attractionSlider" min="0" max="100" value="5" class="slider"
+                            data-output="attractionOutput" data-scale-min="0.000001" data-scale-max="1"
+                            data-scale-factor="1" data-precision="5" data-scale-type="log">
+                        <output id="attractionOutput">0.0005</output>
                         <div class="slider-min-max">
-                            <span class="slider-min">0</span>
-                            <span class="slider-max">2</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Repulsion Strength Slider -->
-                <div class="slider-container">
-                    <div class="range-slider">
-                        <label for="repulsionStrengthSlider">Repulsion Strength:</label>
-                        <small class="slider-explanation">Higher strength spreads nodes further apart, lower brings them
-                            closer.</small>
-                        <input type="range" id="repulsionStrengthSlider" min="0" max="100" class="slider"
-                            data-output="repulsionStrengthOutput" data-scale-min="0.0000001" data-scale-max="10000000"
-                            data-scale-factor="1" data-precision="4" data-scale-type="log">
-                        <output id="repulsionStrengthOutput">1.0000</output>
-                        <div class="slider-min-max">
-                            <span class="slider-min">0.0000001</span>
-                            <span class="slider-max">10000000</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Cooling Rate Slider -->
-                <div class="slider-container">
-                    <label for="coolingRateSlider">Cooling Rate:</label>
-                    <small class="slider-explanation">Higher cooling slows down movement quickly, lower cooling allows
-                        longer simulation.</small>
-                    <div class="range-slider">
-                        <input type="range" id="coolingRateSlider" min="0" max="100" value="10" class="slider"
-                            data-output="coolingRateOutput" data-scale-min="0" data-scale-max="1" data-scale-factor="1"
-                            data-precision="2" data-scale-type="linear">
-                        <output id="coolingRateOutput">0.10</output>
-                        <div class="slider-min-max">
-                            <span class="slider-min">0</span>
+                            <span class="slider-min">0.000001</span>
                             <span class="slider-max">1</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inertia Slider -->
+                <div class="slider-container">
+                    <label for="inertiaSlider">Inertia:</label>
+                    <small class="slider-explanation">Higher inertia maintains node velocity, lower inertia slows nodes
+                        down faster.</small>
+                    <div class="range-slider">
+                        <input type="range" id="inertiaSlider" min="0" max="100" value="60" class="slider"
+                            data-output="inertiaOutput" data-scale-min="0" data-scale-max="5" data-scale-factor="1"
+                            data-precision="1" data-scale-type="linear" step="0.1">
+                        <output id="inertiaOutput">0.6</output>
+                        <div class="slider-min-max">
+                            <span class="slider-min">0</span>
+                            <span class="slider-max">5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Max Move Slider -->
+                <div class="slider-container">
+                    <label for="maxMoveSlider">Max Move:</label>
+                    <small class="slider-explanation">Higher max move allows nodes to move further in each
+                        iteration.</small>
+                    <div class="range-slider">
+                        <input type="range" id="maxMoveSlider" min="0" max="100" value="0.5" class="slider"
+                            data-output="maxMoveOutput" data-scale-min="0" data-scale-max="1000" data-scale-factor="1"
+                            data-precision="0" data-scale-type="linear" step ="0.1">
+                        <output id="maxMoveOutput">5</output>
+                        <div class="slider-min-max">
+                            <span class="slider-min">0</span>
+                            <span class="slider-max">1000</span>
                         </div>
                     </div>
                 </div>

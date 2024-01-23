@@ -51,18 +51,23 @@ async function createFeedElement(feedData, feedIndex, totalFeeds) {
 
 
 async function appendFeedsToDOM(feedsData) {
-    const feedsFragment = document.createDocumentFragment();
-    const totalFeeds = Object.keys(feedsData).length;
+    try {
+        const feedsFragment = document.createDocumentFragment();
+        const totalFeeds = Object.keys(feedsData).length;
 
-    for (const [feedIndex, feedData] of Object.entries(feedsData)) {
-        if (feedData.nt > 0) {
-            const { feedElement, color } = await createFeedElement(feedData, feedIndex, totalFeeds);
-            feedData.feedColor = color; // Store the color in feedData
-            feedsFragment.appendChild(feedElement);
+        for (const [feedIndex, feedData] of Object.entries(feedsData)) {
+            if (feedData.nt > 0) {
+                const { feedElement, color } = await createFeedElement(feedData, feedIndex, totalFeeds);
+                feedData.feedColor = color; // Store the color in feedData
+                feedsFragment.appendChild(feedElement);
+            }
         }
-    }
 
-    feedsListElement.appendChild(feedsFragment);
+        feedsListElement.appendChild(feedsFragment);
+    } catch (error) {
+        console.error('Error appending feeds to DOM:', error);
+        // Handle the error appropriately, e.g., show an error message to the user
+    }
 }
 
 

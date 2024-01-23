@@ -24,7 +24,7 @@ function resetSubmitButton() {
   submitButton.textContent = "Submit";
 }
 
-// Function to handle form submission
+
 async function handleLogin(event) {
   event.preventDefault();
   const username = inputUsername.value.trim();
@@ -43,10 +43,7 @@ async function handleLogin(event) {
       { username, password }, { withCredentials: true });
     logger.log("Login response:", response.data);
     if (response.data.authenticated) {
-      // Save the session cookie if present and redirect to feeds.html
-      if (response.data.sessionCookie) {
-        localStorage.setItem('sessionid', response.data.sessionCookie);
-      }
+      // Redirect to the feeds page after successful login
       window.location.href = '/feeds.html';
     } else {
       displayLoginError(response.data.error || 'Login failed. Please try again.');
@@ -57,6 +54,7 @@ async function handleLogin(event) {
     resetSubmitButton();
   }
 }
+
 
 // Attach event listener to the form
 formLogin.addEventListener("submit", handleLogin);

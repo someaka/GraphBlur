@@ -9,34 +9,14 @@ const baseUrl = getApiBaseUrl();
 
 async function fetchFeeds() {
     try {
-        const sessionCookie = localStorage.getItem('sessionid');
-        const headers = sessionCookie ? { 'Cookie': `sessionid=${sessionCookie}` } : {};
-        // logger.log("baseUrl", baseUrl)
-        const response = await fetch(`${baseUrl}/feeds`, {
-            method: 'GET',
-            headers: headers,
-            credentials: 'include' // This will include cookies with the request
+        const response = await axios.get(`${baseUrl}/feeds`, {
+            withCredentials: true // This will include cookies with the request
         });
-
-        if (!response.ok) {
-            // Handle other HTTP errors
-            logger.error('HTTP error when fetching feeds:', response.status);
-            return null;
-        }
-
-        const data = await response.text();
-        // logger.log("data", data)
-
-        try {
-            const json = JSON.parse(data);
-            return json;
-        } catch (e) {
-            logger.error('Failed to parse JSON:', e);
-            return null;
-        }
+        return response.data; // axios automatically parses JSON, so we return it directly
     } catch (error) {
         logger.error('Failed to fetch feeds:', error);
-        return null;
+        // Depending on how you want to handle errors, you can throw an error or return a specific error object
+        return { error: 'Failed to fetch feeds', details: error.response };
     }
 }
 

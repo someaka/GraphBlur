@@ -1,41 +1,9 @@
-// cypress/e2e/login.cy.js
 import { getApiBaseUrl } from '../../src/utils/apiConfig.js';
 
 const baseUrl = getApiBaseUrl();
 
+
 describe('Login Tests', () => {
-  it('successfully logs in and redirects to the feeds page', () => {
-
-    // Intercept the login request to check the response headers later
-    cy.intercept('POST', `${baseUrl}/login`).as('loginRequest');
-
-    // Visit the login page
-    cy.visit('/');
-
-    // Fill in the username and password fields
-    cy.get('#inputUsername').type('curaSed');
-    cy.get('#inputPassword').type('010203');
-
-    // Submit the form
-    cy.get('#formLogin').submit();
-
-    // Wait for the login request to complete
-    cy.wait('@loginRequest').then((interception) => {
-      // Check if the session cookie is present in the JSON response body
-      expect(interception.response.body).to.have.property('sessionCookie');
-
-      // Check if the session cookie is saved in localStorage
-      cy.window().then((win) => {
-        const localStorageSessionId = win.localStorage.getItem('sessionid');
-        expect(localStorageSessionId).to.equal(interception.response.body.sessionCookie);
-      });
-
-      // Verify that the user is redirected to the feeds page
-      cy.url().should('include', '/feeds.html');
-    });
-  });
-
-
 
   it('displays an error message for incorrect username', () => {
     cy.visit('/');
@@ -51,41 +19,50 @@ describe('Login Tests', () => {
     cy.get('#inputUsername').type('curaSed');
     cy.get('#inputPassword').type('wrongpassword');
     cy.get('#formLogin').submit();
-    cy.get('#loginStatusMessage').should('be.visible').and('not.have.text', '');
+    cy.get('#loginStatusMessage').should('be.visible'); // Wait for the error message to become visible
+    cy.get('#loginStatusMessage').should('not.have.text', ''); // Then check that it's not empty
     cy.url().should('not.include', '/feeds.html');
   });
 
 
 
+  it('successfully logs in, redirects to the feeds page, and persists session across reloads', () => {
+    // Intercept the login request to check the response headers later
+    cy.intercept('POST', `${baseUrl}/login`).as('loginRequest');
 
+    // Visit the login page
+    cy.visit('/');
 
-  it('persists the user session across page navigation and reloads', () => {
-    // Perform a login to set the session cookie
-    cy.request('POST',  `${baseUrl}/login`, { username: 'curaSed', password: '010203' })
-      .its('body')
-      .then((body) => {
-        expect(body).to.have.property('sessionCookie');
-        // Save the session cookie in localStorage using the browser's localStorage API
-        localStorage.setItem('sessionid', body.sessionCookie);
+    // Fill in the username and password fields
+    cy.get('#inputUsername').type('curaSed');
+    cy.get('#inputPassword').type('010203');
+
+    // Submit the form
+    cy.get('#formLogin').submit();
+
+    // Wait for the login request to complete and verify redirection to the feeds page
+    cy.wait('@loginRequest').then((interception) => {
+      // Check if the session cookie is set
+      cy.getCookie('sessionid').should('exist');
+    })
+      .url().should('include', '/feeds.html')
+      // After successful login and redirection, test the persistence of the session
+      .then(() => {
+        // Visit the feeds page
+        //cy.visit('/feeds.html');
+
+        // Check if the session cookie is still present after the reload
+        cy.getCookie('sessionid').should('exist');
+
+        // Wait for a short delay (e.g., 2000 milliseconds)
+        // cy.wait(2000);
+
+        // Reload the page
+        cy.reload();
+
+        // Check if the session cookie is still present after the reload
+        cy.getCookie('sessionid').should('exist');
       });
-
-    // Visit the feeds page
-    cy.visit('/feeds.html');
-
-    // Check if the session cookie is present in localStorage
-    cy.window().then((win) => {
-      const localStorageSessionId = win.localStorage.getItem('sessionid');
-      expect(localStorageSessionId).to.be.a('string');
-    });
-
-    // Reload the page
-    cy.reload();
-
-    // Check if the session cookie is still present in localStorage after the reload
-    cy.window().then((winAfterReload) => {
-      const localStorageSessionIdAfterReload = winAfterReload.localStorage.getItem('sessionid');
-      expect(localStorageSessionIdAfterReload).to.be.a('string');
-    });
   });
 
 

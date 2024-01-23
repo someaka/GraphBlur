@@ -7,13 +7,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { firefox } from 'playwright';
 import { extract } from '@extractus/article-extractor';
 import { articleUpdateEmitter } from './events.js';
-import { newsBlurSessionCookie } from './server.js';
+//import { newsBlurSessionCookie } from './server.js';
 
 let browser;
 let articleCache = {};
 const userAgent = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
 
-// Helper function to fetch a single article// Helper function to fetch a single article with retries
+// Helper function to fetch a single article with retries
+// @articles.js
 async function fetchArticle(url, retries = 1) {
     if (typeof url !== 'string') {
         logger.error(`Invalid URL: ${url}`);
@@ -22,17 +23,15 @@ async function fetchArticle(url, retries = 1) {
     let attempt = 0;
     while (attempt < retries) {
         try {
-            // Include the session cookie in the request headers
-            const headers = newsBlurSessionCookie ? {
-                'Cookie': `sessionid=${newsBlurSessionCookie}`,
-                'User-Agent': userAgent
-            } : {
-                'User-Agent': userAgent
-            };
-
-            const response = await axios.get(url, { headers });
+            logger.log(`Attempting to fetch article: ${url}, Attempt: ${attempt + 1}`);
+            const response = await axios.get(url, {
+                withCredentials: true, // This will include cookies with the request
+                headers: { 'User-Agent': userAgent }
+            });
+            logger.log(`Successfully fetched article: ${url}`);
             return { article: await processArticle(response.data, url), status: 'success' };
         } catch (error) {
+            logger.error(`Error fetching article: ${url}, Attempt: ${attempt + 1}, Error: ${error.message}`);
             if (attempt === retries - 1) {
                 retryFetchArticle(url); 
                 return { article: null, status: 'failure', error: error.message };
@@ -42,7 +41,6 @@ async function fetchArticle(url, retries = 1) {
         }
     }
 }
-
 
 
 async function fetchArticleContentWithPlaywright(url) {
@@ -64,7 +62,7 @@ function retryFetchArticle(url) {
             articleUpdateEmitter.emit('articleUpdate', article);
         })
         .catch(error => {
-            logger.error('Failed to fetch article:', error);
+            logger.warn('Failed to fetch article:', error);
         });
 }
 

@@ -404,7 +404,9 @@ function visualizeGraph(newGraphData) {
 }
 
 function clearGraph() {
-    graphS.clearGraph();
+    if(graphS){
+        graphS.clearGraph();
+    }
 }
 
 function updateForceSettings(settings) {

@@ -1,3 +1,5 @@
+import { graphLogger as logger } from '../logger.js';
+
 import Graph from "graphology";
 import Sigma from "sigma";
 import chroma from "chroma-js";
@@ -32,7 +34,7 @@ class SigmaGraphManager {
         this.settings = {
             isNodeFixed: (_, attr) => attr.highlighted,
             settings: {
-                attraction: 0.0005,
+                attraction: 0.0001,
                 repulsion: 0.1,
                 gravity: 0.0001,
                 inertia: 0.6,
@@ -84,7 +86,7 @@ class SigmaGraphManager {
 
 
         this.renderer.on('clickNode', (e) => {
-            console.log('Node clicked:', e.node);
+            logger.log('Node clicked:', e.node);
             this.updateRightPanelWithFeed(e.node);
         });
 
@@ -137,7 +139,7 @@ class SigmaGraphManager {
 
 
     updateRightPanelWithFeed(nodeId) {
-        // console.log('Node clicked:', nodeId);
+        // logger.log('Node clicked:', nodeId);
         const nodeData = this.graph.getNodeAttributes(nodeId);
         const hslColorString = nodeData.colorhsl;
         pointArticleFromNode(hslColorString, nodeId);
@@ -186,7 +188,7 @@ class SigmaGraphManager {
         const saturation = parseFloat(hslMatch[2]);
         const lightness = parseFloat(hslMatch[3]);
 
-        // console.log("Hue:", hue, "Saturation:", saturation, "Lightness:", lightness);
+        // logger.log("Hue:", hue, "Saturation:", saturation, "Lightness:", lightness);
 
         // Use Chroma.js to construct a valid HSL color
         const hslColor = chroma.hsl(hue, saturation / 100, lightness / 100).css();
@@ -267,101 +269,113 @@ class SigmaGraphManager {
         const radius = 0.05; // Small radius around the center for initial node placement
         const defaultNodeSize = 10; // Default size for new nodes
 
-        // Add new nodes around the center with weak edges
-        newGraphData.nodes.forEach(node => {
-            if (!existingNodesSet.has(node.id)) {
-                // Randomize position around the center within the defined radius
-                const angle = Math.random() * Math.PI * 2;
-                const distance = Math.random() * radius;
-                const attributes = this.getNodeAttributes(node);
-                attributes.x = center.x + distance * Math.cos(angle);
-                attributes.y = center.y + distance * Math.sin(angle);
 
-                // Set default size for new nodes
-                attributes.size = defaultNodeSize;
-
-                // Add node with weak edge strength
-                attributes.edgeStrength = 0.1; // Custom attribute for edge strength
-                this.graph.addNode(node.id, attributes);
-
-                // Animate edge strength from weak to full over 3 seconds
-                const animateEdgeStrength = (startTime, nodeId) => {
-                    const currentTime = Date.now();
-                    const elapsedTime = currentTime - startTime;
-                    const duration = 1000; // 1 second
-
-                    if (elapsedTime < duration) {
-                        const progress = elapsedTime / duration;
-                        const edgeStrength = 0.1 + (progress * (1 - 0.1)); // Animate from 0.1 to 1
-
-                        // Update edge strength for all edges connected to the new node
-                        this.graph.forEachEdge(nodeId, (edge) => {
-                            this.graph.setEdgeAttribute(edge, 'edgeStrength', edgeStrength);
-                        });
-
-                        requestAnimationFrame(() => animateEdgeStrength(startTime, nodeId));
+        try {
+            // Remove edges that are no longer present
+            existingEdgesSet.forEach(edge => {
+                if (this.graph.hasEdge(edge)) { // Check if the edge still exists
+                    const [sourceId, targetId] = this.graph.extremities(edge);
+                    if (!newGraphData.links.some(link => {
+                        const linkSourceId = typeof link.source === 'object' ? link.source.id : link.source;
+                        const linkTargetId = typeof link.target === 'object' ? link.target.id : link.target;
+                        return (sourceId === linkSourceId && targetId === linkTargetId) || (sourceId === linkTargetId && targetId === linkSourceId);
+                    })) {
+                        this.graph.dropEdge(edge);
                     }
-                };
-
-                // Start the edge strength animation
-                const startTime = Date.now();
-                requestAnimationFrame(() => animateEdgeStrength(startTime, node.id));
-            }
-        });
-
-        // Remove nodes that are no longer present
-        existingNodesSet.forEach(nodeId => {
-            if (!newGraphData.nodes.some(node => node.id === nodeId)) {
-                // Before removing the node, remove all connected edges
-                this.graph.forEachEdge(nodeId, edge => {
-                    this.graph.dropEdge(edge);
-                    existingEdgesSet.delete(edge); // Update the existing edges set
-                });
-                // Now it's safe to remove the node
-                this.graph.dropNode(nodeId);
-            }
-        });
-
-        // Add new edges
-        newGraphData.links.forEach(link => {
-            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-            const targetId = typeof link.target === 'object' ? link.target.id : link.target;
-            const edgeKey = `${sourceId}-${targetId}`;
-
-            if (!existingEdgesSet.has(edgeKey)) {
-                const sourceColor = this.graph.getNodeAttribute(sourceId, 'color');
-                const targetColor = this.graph.getNodeAttribute(targetId, 'color');
-
-                // Calculate the average color of the two nodes
-                const averageColor = chroma.mix(sourceColor, targetColor, 0.5, 'rgb').brighten(0.77).hex();
-                this.graph.addEdgeWithKey(edgeKey, sourceId, targetId, {
-                    size: link.size || 1,
-                    color: averageColor,
-                });
-            }
-        });
-
-        // // After adding nodes and edges, fit the graph to view
-        // this.renderer.on('afterRender', () => {
-        //     this.renderer.getCamera().animatedReset();
-        // });
-
-        // Remove edges that are no longer present
-        existingEdgesSet.forEach(edge => {
-            if (this.graph.hasEdge(edge)) { // Check if the edge still exists
-                const [sourceId, targetId] = this.graph.extremities(edge);
-                if (!newGraphData.links.some(link => {
-                    const linkSourceId = typeof link.source === 'object' ? link.source.id : link.source;
-                    const linkTargetId = typeof link.target === 'object' ? link.target.id : link.target;
-                    return (sourceId === linkSourceId && targetId === linkTargetId) || (sourceId === linkTargetId && targetId === linkSourceId);
-                })) {
-                    this.graph.dropEdge(edge);
                 }
-            }
-        });
+            });
 
-        // Refresh the Sigma renderer to reflect the changes
-        this.renderer.refresh();
+            // Remove nodes that are no longer present
+            existingNodesSet.forEach(nodeId => {
+                if (!newGraphData.nodes.some(node => node.id === nodeId)) {
+                    // Before removing the node, remove all connected edges
+                    this.graph.forEachEdge(nodeId, edge => {
+                        this.graph.dropEdge(edge);
+                        existingEdgesSet.delete(edge); // Update the existing edges set
+                    });
+                    // Now it's safe to remove the node
+                    this.graph.dropNode(nodeId);
+                }
+            });
+
+
+
+
+            // Add new nodes around the center with weak edges
+            newGraphData.nodes.forEach(node => {
+                if (!existingNodesSet.has(node.id)) {
+                    // Randomize position around the center within the defined radius
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = Math.random() * radius;
+                    const attributes = this.getNodeAttributes(node);
+                    attributes.x = center.x + distance * Math.cos(angle);
+                    attributes.y = center.y + distance * Math.sin(angle);
+
+                    // Set default size for new nodes
+                    attributes.size = defaultNodeSize;
+
+                    // Add node with weak edge strength
+                    attributes.edgeStrength = 0.1; // Custom attribute for edge strength
+                    this.graph.addNode(node.id, attributes);
+
+                    // Animate edge strength from weak to full over 3 seconds
+                    const animateEdgeStrength = (startTime, nodeId) => {
+                        const currentTime = Date.now();
+                        const elapsedTime = currentTime - startTime;
+                        const duration = 1000; // 1 second
+
+                        if (elapsedTime < duration) {
+                            const progress = elapsedTime / duration;
+                            const edgeStrength = 0.1 + (progress * (1 - 0.1)); // Animate from 0.1 to 1
+
+                            // Update edge strength for all edges connected to the new node
+                            this.graph.forEachEdge(nodeId, (edge) => {
+                                this.graph.setEdgeAttribute(edge, 'edgeStrength', edgeStrength);
+                            });
+
+                            requestAnimationFrame(() => animateEdgeStrength(startTime, nodeId));
+                        }
+                    };
+
+                    // Start the edge strength animation
+                    const startTime = Date.now();
+                    requestAnimationFrame(() => animateEdgeStrength(startTime, node.id));
+                }
+            });
+
+
+
+            // Add new edges
+            newGraphData.links.forEach(link => {
+                const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+                const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+                const edgeKey = `${sourceId}_${targetId}`;
+                const edgeKeyRev = `${targetId}_${sourceId}`;
+
+                if (!existingEdgesSet.has(edgeKey) && !existingEdgesSet.has(edgeKeyRev)) {
+                    const sourceColor = this.graph.getNodeAttribute(sourceId, 'color');
+                    const targetColor = this.graph.getNodeAttribute(targetId, 'color');
+
+                    // Calculate the average color of the two nodes
+                    const averageColor = chroma.mix(sourceColor, targetColor, 0.5, 'rgb').brighten(0.77).hex();
+                    this.graph.addEdgeWithKey(edgeKey, sourceId, targetId, {
+                        size: link.size || 1,
+                        color: averageColor,
+                    });
+                }
+            });
+
+
+
+
+
+            // Refresh the Sigma renderer to reflect the changes
+            this.renderer.refresh();
+        } catch {
+            logger.warn("Failed to update graph")
+        }
+
+        
     }
 
     clearGraph() {
@@ -387,10 +401,10 @@ class SigmaGraphManager {
         this.settings.settings = { ...this.settings.settings, ...newSettings };
 
         this.layout = new ForceSupervisor(this.graph, this.settings);
-    
+
         this.startLayout();
         this.renderer.refresh();
-        console.log('New ForceSupervisor created with settings:', this.settings);
+        logger.log('New ForceSupervisor created with settings:', this.settings);
     }
 }
 
@@ -404,13 +418,15 @@ function visualizeGraph(newGraphData) {
 }
 
 function clearGraph() {
-    if(graphS){
+    if (graphS) {
         graphS.clearGraph();
     }
 }
 
 function updateForceSettings(settings) {
-    graphS.updateForceSettings(settings);
+    if (graphS) {
+        graphS.updateForceSettings(settings);
+    }
 }
 
 export { visualizeGraph, clearGraph, updateForceSettings };

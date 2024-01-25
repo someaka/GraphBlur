@@ -4,10 +4,12 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { login } from './auth.js';
-import { calculateAndSendSimilarityPairs, articleUpdateEmitter } from './events.js';
-import { articleCache, fetchArticlesWithContentForFeeds } from './articles.js';
+import { calculateAndSendSimilarityPairs } from './events.js';
+import { articleCache, fetchArticlesInBatches, eventEmitter } from './articles.js';
 import { serverLogger as logger } from '../logger.js';
 import { fetchFeeds, fetchStories } from './serverFeedFetcher2.js';
+import { generateColors } from '../utils/colorUtils.js';
+
 
 dotenv.config();
 
@@ -17,6 +19,7 @@ const __dirname = path.dirname(__filename);
 class Server {
   constructor() {
     this.clients = [];
+    this.feeds = {};
     this.mode = process.env.NODE_ENV === 'production';
     this.PORT = process.env.PORT || (this.mode ? 3000 : 3001);
     this.app = express();
@@ -27,9 +30,9 @@ class Server {
   configureMiddleware() {
     this.app.use(express.json());
     this.app.use(cookieParser());
- 
+
     this.app.use((req, res, next) => {
-      res.header('Access-Control-Allow-Origin', 'http://yourClientDomain'); // Replace with your client's domain
+      res.header('Access-Control-Allow-Origin', '*'); // Replace with your client's domain
       res.header('Access-Control-Allow-Credentials', 'true');
       next();
     });
@@ -43,7 +46,7 @@ class Server {
     this.app.post('/login', this.handleLogin.bind(this));
     this.app.get('/feeds', this.handleGetFeeds.bind(this));
     this.app.post('/fetch-articles', this.handleFetchArticles.bind(this));
-    this.app.get('/article-updates', this.handleArticleUpdates.bind(this));
+    this.app.get('/batch-articles', this.handleBatchArticles.bind(this));
     this.app.get('/events', this.handleEvents.bind(this));
     if (this.mode) {
       this.app.get('*', (req, res) => {
@@ -63,8 +66,8 @@ class Server {
       if (loginResult.authenticated) {
         res.cookie('sessionid', loginResult.sessionCookie, {
           httpOnly: true, // The cookie is not accessible via JavaScript
-          // Add 'secure: true' if you are using HTTPS
-          // Add 'sameSite: "None"' if your client is on a different domain and you are using HTTPS
+          secure: true,
+          sameSite: "None",
           maxAge: 3600000 // The cookie will expire after 1 hour
         });
         // The server no longer saves the session cookie, so we just return it to the client
@@ -77,16 +80,19 @@ class Server {
     }
   };
 
+
   handleGetFeeds = async (req, res) => {
-    const sessionCookie = req.cookies['sessionid']; // Replace with the actual name of your session cookie
+    const sessionCookie = req.cookies['sessionid'];
     try {
-      const feeds = await fetchFeeds(sessionCookie);
+      this.feeds = await fetchFeeds(sessionCookie);
+      this.feeds = generateColors(this.feeds);
       const feedsWithUnreadStories = {};
 
-      const promises = Object.keys(feeds).map(async feedId => {
-        const unreadStories = await fetchStories(sessionCookie, feedId);
+      const promises = Object.keys(this.feeds).map(async (feedId) => {
+        const { color } = this.feeds[feedId];
+        const unreadStories = await fetchStories(sessionCookie, feedId, color);
         feedsWithUnreadStories[feedId] = {
-          ...feeds[feedId],
+          ...this.feeds[feedId],
           unreadStories: unreadStories.map(story => story.story_permalink)
         };
         // Cache the unread stories for each feed
@@ -101,51 +107,57 @@ class Server {
     }
   };
 
+
+
   handleFetchArticles = async (req, res) => {
-    const sessionCookie = req.headers.cookie; // Extract the session cookie from the request headers
+    // const sessionCookie = req.headers.cookie;
     const { feedId, selectedFeedIds } = req.body;
     if (!feedId || (!Array.isArray(selectedFeedIds) && typeof selectedFeedIds !== 'string')) {
       return res.status(400).json({ error: 'Feed ID and selected feed IDs are required' });
     }
 
     try {
-      // Fetch new articles for the provided feedId
-      const newArticlesWithContent = await fetchArticlesWithContentForFeeds(feedId, sessionCookie); // Pass the session cookie here
-      // Update the cache with the new articles
-      articleCache[feedId] = newArticlesWithContent;
 
-      // Send only the new articles to the client
-      res.status(200).json({ articles: newArticlesWithContent });
+      // Acknowledge that the batch fetching process has started
+      res.status(202).json({ message: 'Batch fetching started' });
 
-      // Retrieve articles from the cache for the selected feed IDs
-      const cachedArticles = selectedFeedIds.flatMap(id => articleCache[id] || []);
-
-      // Combine new articles with cached articles for similarity calculation
-      const allArticlesWithContent = [...newArticlesWithContent, ...cachedArticles];
-
-      // Call the similarity Pairs calculation function with all articles
-      calculateAndSendSimilarityPairs(this.clients, allArticlesWithContent);
+      // Fetch articles in batches
+      fetchArticlesInBatches(feedId, this.feeds[feedId].color, 5).then(() => {
+        // Once all batches have been fetched, call the similarity calculation
+        const cachedArticles = selectedFeedIds.flatMap(id => articleCache[id] || []);
+        if (cachedArticles.length > 0) {
+          calculateAndSendSimilarityPairs(this.clients, cachedArticles);
+        }
+      }).catch(error => {
+        logger.error('Error fetching articles:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      });
     } catch (error) {
       logger.error('Error fetching articles:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   };
 
-  handleArticleUpdates = (req, res) => {
+
+
+  handleBatchArticles = async (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    const onArticleUpdate = (article) => {
-      res.write(`data: ${JSON.stringify(article)}\n\n`);
+    // Function to send a batch of articles as an SSE
+    const sendBatch = (articlesWithContent) => {
+      res.write(`event: articlesBatch\ndata: ${JSON.stringify({ articles: articlesWithContent })}\n\n`);
+      //logger.log("Articles sent to client:", articlesWithContent);
     };
 
-    articleUpdateEmitter.on('articleUpdate', onArticleUpdate);
-
-    req.on('close', () => {
-      articleUpdateEmitter.removeListener('articleUpdate', onArticleUpdate);
+    // Listen for 'articlesBatch' events and send them to the client
+    eventEmitter.on('articlesBatch', (articlesWithContent) => {
+      sendBatch(articlesWithContent);
     });
+    // logger.log("EventEmitter:", eventEmitter);
   };
+
 
   handleEvents = (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');

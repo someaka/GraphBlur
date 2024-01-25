@@ -82,13 +82,13 @@
                     <small class="slider-explanation">Higher attraction increases the force pulling connected nodes
                         together.</small>
                     <div class="range-slider">
-                        <input type="range" id="attractionSlider" min="0" max="100" value="5" class="slider"
-                            data-output="attractionOutput" data-scale-min="0.000001" data-scale-max="1"
-                            data-scale-factor="1" data-precision="5" data-scale-type="log">
-                        <output id="attractionOutput">0.0005</output>
+                        <input type="range" id="attractionSlider" min="0" max="10000" value="100" class="slider"
+                            data-output="attractionOutput" data-scale-min="0.000001" data-scale-max="0.01"
+                            data-scale-factor="0.0001" data-precision="8" data-scale-type="log">
+                        <output id="attractionOutput">0.0001</output>
                         <div class="slider-min-max">
                             <span class="slider-min">0.000001</span>
-                            <span class="slider-max">1</span>
+                            <span class="slider-max">0.01</span>
                         </div>
                     </div>
                 </div>
@@ -118,7 +118,7 @@
                     <div class="range-slider">
                         <input type="range" id="maxMoveSlider" min="0" max="100" value="0.5" class="slider"
                             data-output="maxMoveOutput" data-scale-min="0" data-scale-max="1000" data-scale-factor="1"
-                            data-precision="0" data-scale-type="linear" step ="0.1">
+                            data-precision="0" data-scale-type="linear" step="0.1">
                         <output id="maxMoveOutput">5</output>
                         <div class="slider-min-max">
                             <span class="slider-min">0</span>

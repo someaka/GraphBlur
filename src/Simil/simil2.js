@@ -1,7 +1,9 @@
+// eslint-disable-next-line no-unused-vars
 import { similLogger as logger } from '../logger.js';
 import { getEmbeddings } from './similarityInteraction.js';
 import { createWorkerPool, terminateWorkerPool } from '../utils/workerSupport.js';
 import { cpus } from 'os';
+// eslint-disable-next-line no-unused-vars
 import { articleCache } from '../server/articles.js';
 
 
@@ -74,7 +76,7 @@ class Similarity {
             for (let j = i + 1; j < articles.length; j++) {
                 const id1 = articles[i].id;
                 const id2 = articles[j].id;
-                const pairKey = `${id1}-${id2}`;
+                const pairKey = `${id1}_${id2}`;
                 // Skip if similarity score already calculated
                 if (this.similarityPairs[pairKey] !== undefined) continue;
                 yield { id1, id2, pairKey };

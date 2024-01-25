@@ -11,4 +11,6 @@ function formatArticleText(text) {
 
 
 
-export { formatArticleText };
+export {
+    formatArticleText
+};

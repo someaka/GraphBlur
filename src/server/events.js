@@ -1,9 +1,5 @@
 import { serverLogger as logger } from '../logger.js';
 import { createSimilarityPairs } from '../Simil/simil2.js';
-import { EventEmitter } from 'events';
-
-// Create an instance of the EventEmitter class to use for article updates
-const articleUpdateEmitter = new EventEmitter();
 
 
 function sendSimilarityPairsUpdate(clients, similarityPairs) {
@@ -22,13 +18,12 @@ async function calculateAndSendSimilarityPairs(clients, articlesWithContent) {
       .filter(article => article && article.article && article.article.title && article.article.text);
     const similarityPairs = await createSimilarityPairs(filteredArticles);
     sendSimilarityPairsUpdate(clients, similarityPairs); // Make sure to pass the clients array
-    // console.log("similarity Pairs sent", similarityPairs);
+    // logger.log("similarity Pairs sent", similarityPairs);
   } catch (error) {
-    logger.error('Error calculating similarity Pairs:', error);
+    logger.warn('Error calculating similarity Pairs:', error);
   }
 }
 
 export {
-  articleUpdateEmitter,
   calculateAndSendSimilarityPairs
 };

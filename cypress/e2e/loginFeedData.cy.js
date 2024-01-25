@@ -27,7 +27,7 @@ describe('Login and Feeds Functionality', () => {
     // Visit the base page, the session cookie should be sent automatically
     cy.visit('/');
     // Attempt to fetch feeds, which should succeed with a valid session cookie
-    cy.request('/api/feeds').then((response) => {
+    cy.request(`${baseUrl}/feeds`).then((response) => {
       expect(response.status).to.eq(200);
       // Perform additional checks on the response body if necessary
     });

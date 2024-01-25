@@ -1,5 +1,3 @@
-// FeedUI.js
-
 import { formatArticleText } from '../utils/FeedUtils.js';
 import { articlesCache } from '../data/FeedCache.js';
 import { feedsLogger as logger } from '../../logger.js';
@@ -34,7 +32,7 @@ function pointArticleFromNode(color, articleId) {
             setTimeout(() => {
                 // Use the article ID to find the article element
                 const articleElement = document.getElementById(`article-${articleId}`);
-                console.log("articleElement", articleElement)
+                logger.log("articleElement", articleElement)
                 if (articleElement) {
                     articleElement.scrollIntoView({ behavior: 'smooth' });
                 }
@@ -45,51 +43,20 @@ function pointArticleFromNode(color, articleId) {
     }
 }
 
+
 async function displayArticles(feedData) {
-    // Clear previous articles and graph
+    const { id: feedId } = feedData;
+
+    // Clear previous articles
     articlesElement.innerHTML = '';
 
     // Check if articles are cached
-    if (!articlesCache[feedData.id]) {
+    if (articlesCache[feedId]) {
+        displayArticlesFromCache(feedId); // Display cached articles
+    } else {
+        // If not cached, load articles using EventSource and update UI in real-time
         await loadArticles(feedData);
     }
-
-    // Display articles in the articles element
-    const articles = articlesCache[feedData.id];
-    //console.log("articles:", articles);
-
-    // Check if articles is an array before calling forEach
-    if (!Array.isArray(articles)) {
-        logger.error(`Expected articles to be an array, but got:`, articles);
-        return; // Exit the function if articles is not an array
-    }
-
-    articles.forEach(articleData => {
-        const articleContainer = document.createElement('div');
-        articleContainer.classList.add('article-container');
-
-        if (articleData && articleData.article) {
-            //console.log("articleData:", articleData);
-            articleContainer.id = `article-${articleData.id}`;
-
-            const titleElement = document.createElement('h2');
-            titleElement.textContent = articleData.article.title;
-            articleContainer.appendChild(titleElement);
-
-            const textElement = document.createElement('p');
-            textElement.textContent = formatArticleText(articleData.article.text);
-            articleContainer.appendChild(textElement);
-
-            articleContainer.style.backgroundColor = articleData.feedColor; // Assign the feed color to the article
-        } else {
-            const failedMessage = document.createElement('p');
-            failedMessage.textContent = 'Failed to fetch article';
-            failedMessage.style.color = 'red'; // Assign a red color to indicate failure
-            articleContainer.appendChild(failedMessage);
-        }
-        articlesElement.appendChild(articleContainer);
-    });
-
 }
 
 
@@ -100,7 +67,7 @@ function updateArticlesUI(article) {
     // Check if an article container for this UUID already exists
     //broken ?
     const articleElement = articlesElement.querySelector(`.article[data-id="${article.id}"]`);
-    console.log("updated article element :", articleElement, "article id:", article.id);
+    logger.log("updated article element :", articleElement, "article id:", article.id);
 
     if (articleElement) {
         // Article already exists, update its content
@@ -122,11 +89,51 @@ function updateArticlesUI(article) {
 }
 
 
+// This function is responsible for creating and displaying a single article in the UI
+function createAndDisplayArticle(articleData) {
+    const articleContainer = document.createElement('div');
+    articleContainer.classList.add('article-container');
+
+    if (articleData && articleData.article) {
+        articleContainer.id = `article-${articleData.id}`;
+
+        const titleElement = document.createElement('h2');
+        titleElement.textContent = articleData.article.title;
+        articleContainer.appendChild(titleElement);
+
+        const textElement = document.createElement('p');
+        textElement.textContent = formatArticleText(articleData.article.text);
+        articleContainer.appendChild(textElement);
+
+        articleContainer.style.backgroundColor = articleData.feedColor; // Assign the feed color to the article
+    } else {
+        const failedMessage = document.createElement('p');
+        failedMessage.textContent = 'Failed to fetch article';
+        failedMessage.style.color = 'red'; // Assign a red color to indicate failure
+        articleContainer.appendChild(failedMessage);
+    }
+    articlesElement.appendChild(articleContainer);
+}
+
+// This function is called to update the UI with the articles from the cache
+function displayArticlesFromCache(feedId) {
+    const articles = articlesCache[feedId];
+    if (Array.isArray(articles)) {
+        articles.forEach(createAndDisplayArticle);
+    } else {
+        logger.error(`Expected articles to be an array, but got:`, articles);
+    }
+}
+
+
 
 export {
-    toggleMainContent,
-    toggleFeedElement,
     displayArticles,
     updateArticlesUI,
+    displayArticlesFromCache,
+    createAndDisplayArticle,
+    
+    toggleFeedElement,
+    toggleMainContent,
     pointArticleFromNode
 };

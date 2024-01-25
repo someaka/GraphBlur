@@ -35,7 +35,7 @@ class FeedsFetcher {
         return data.feeds;
     }
 
-    async fetchStories(sessionCookie, feedId, options = {}) {
+    async fetchStories(sessionCookie, feedId, color, options = {}) {
         const params = new URLSearchParams({
             page: options.page || 1,
             order: options.order || 'newest',
@@ -57,7 +57,7 @@ class FeedsFetcher {
             page++;
         }
 
-        return allUnreadStories;
+        return allUnreadStories.map(story => ({ ...story, color }));
     }
 }
 
@@ -70,6 +70,6 @@ const fetchStories = (...args) => feedsFetcherInstance.fetchStories(...args);
 
 // Export the instance methods as standalone functions using object shorthand syntax
 export {
-  fetchFeeds,
-  fetchStories
+    fetchFeeds,
+    fetchStories
 };

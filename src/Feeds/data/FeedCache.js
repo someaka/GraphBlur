@@ -12,8 +12,7 @@ function cacheArticle(article) {
     if (existingArticleIndex === -1) {
         articlesCache[feedId].push({
             id: article.id,
-            title: article.title,
-            content: article.content,
+            article: article.article,
             feedColor: article.feedColor
         });
     }

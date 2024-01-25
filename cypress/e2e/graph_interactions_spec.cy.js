@@ -2,31 +2,44 @@ import { getApiBaseUrl } from '../../src/utils/apiConfig.js';
 
 const baseUrl = getApiBaseUrl();
 
+const validUsername = 'curaSed';
+const validPassword = '010203';
+
 describe('Graph Interactions', () => {
+
+  before(() => {
+    // Perform a login to set the session cookie
+    cy.request('POST', `${baseUrl}/login`, { username: 'curaSed', password: '010203' })
+      .then((response) => {
+        // Check that the 'sessionid' cookie is set
+        expect(response.headers['set-cookie']).to.exist;
+        // Save the cookie value to use in subsequent requests
+        const cookie = response.headers['set-cookie'].find(c => c.startsWith('sessionid='));
+        expect(cookie).to.exist;
+        cy.setCookie('sessionid', cookie.split(';')[0].split('=')[1]);
+      });
+  });
 
   it('should login, click on a feed, and verify nodes are displayed', () => {
     // Log the base URL to the console
-    console.log('Base URL:', baseUrl);
+    // console.log('Base URL:', baseUrl);
 
 
-    // Intercept the API call that fetches the feeds before starting the login process
-    cy.intercept('GET', `${baseUrl}/feeds`).as('getFeeds');
+
 
     // Intercept the API call that fetches the articles for the clicked feed
     cy.intercept('POST', `${baseUrl}/fetch-articles`).as('fetchArticles');
 
+    // Visit the feeds page, the session cookie should be sent automatically
+    cy.visit('/feeds.html');
 
-    // Start the login process
-    cy.visit('/');
-    cy.get('#inputUsername').type('curaSed');
-    cy.get('#inputPassword').type('010203');
-    cy.get('#formLogin').submit();
+    cy.request(`${baseUrl}/feeds`).then((response) => {
+      expect(response.status).to.eq(200);
+    });
 
-    // Wait for the redirect to feeds page
-    cy.url().should('include', '/feeds.html');
+    // Add assertions to check for the presence of feeds on the page
+    cy.get('#feedsContainer').should('be.visible');
 
-    // Wait for the feeds to be loaded with a custom timeout
-    cy.wait('@getFeeds', { timeout: 10000 });
 
 
 
@@ -37,9 +50,12 @@ describe('Graph Interactions', () => {
     cy.get('#feedslist div').first().should('be.visible').click();
 
     // Wait for the articles to be loaded
-    cy.wait('@fetchArticles');
+    cy.wait('@fetchArticles').then(() => {
+      cy.wait(5000);
+      cy.screenshot('after');
+    });
 
-    cy.screenshot('after');
+
 
     // Get the paths of the screenshots
     cy.task('getBeforeScreenshotPath').then((beforePath) => {

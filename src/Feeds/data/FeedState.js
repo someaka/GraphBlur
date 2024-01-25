@@ -11,6 +11,10 @@ function isCurrentDisplayedFeed(feedData) {
     return currentFeed && currentFeed.id === feedData.id;
 }
 
+function isSelectedButNotDisplayed(feedElement) {
+    return feedElement.classList.contains('clicked');
+}
+
 function unselectCurrentFeed() {
     if (!currentFeed) return;
     const currentFeedElement = document.querySelector(`.feed[data-id="${currentFeed.id}"]`);
@@ -29,4 +33,13 @@ function expandMainContent(feedData) {
     toggleMainContent(true); // Move the panel to the left
 }
 
-export { isSameFeedClickedBool, currentFeed, isSameFeedClicked, isCurrentDisplayedFeed, unselectCurrentFeed, retractMainContent, expandMainContent };
+export {
+  isSameFeedClickedBool,
+  currentFeed,
+  isSameFeedClicked,
+  isSelectedButNotDisplayed,
+  isCurrentDisplayedFeed,
+  unselectCurrentFeed,
+  retractMainContent,
+  expandMainContent
+};

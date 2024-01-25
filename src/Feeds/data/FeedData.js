@@ -1,9 +1,8 @@
-// FeedData.js
-
 import axios from 'axios';
 import { feedsLogger as logger } from '../../logger.js';
-import { articlesCache } from './FeedCache.js';
 import { getApiBaseUrl } from '../../utils/apiConfig.js';
+import { loadArticlesFromEventSource } from '../FeedEventSource.js';
+
 
 const baseUrl = getApiBaseUrl();
 
@@ -21,75 +20,19 @@ async function fetchFeeds() {
 }
 
 
-
-async function fetchHtmlResults(feedId) {
-    logger.log(`Fetching articles for feedId: ${feedId}`);
-
-    // Get all feed elements and filter the ones that have the 'clicked' class
-    const selectedFeedElements = document.querySelectorAll('#feedslist div.clicked');
-    // Extract the IDs of the selected feeds
-    const selectedFeedIds = Array.from(selectedFeedElements).map(feedEl => feedEl.id);
-
-    try {
-        const response = await axios.post(`${baseUrl}/fetch-articles`, {
-            feedId,
-            selectedFeedIds // Include the selected feed IDs in the request body
-        });
-        // logger.log('Response from fetch-articles:', response.data); // Log the server response
-        if (response.data.warning) {
-            logger.warn('Warning from fetch-articles:', response.data.warning);
-        }
-        if (response.data && Array.isArray(response.data.articles)) {
-            return response.data.articles; // Return the articles array
-        } else {
-            logger.error('fetchHtmlResults did not return an array:', response.data);
-            return []; // Return an empty array if the response is not as expected
-        }
-    } catch (error) {
-        logger.error('Failed to fetch articles:', error);
-        return []; // Return an empty array in case of an error
-    }
-}
-
-
-
-async function updateArticlesWithColor(articles, feedColor) {
-    return articles.map(article => ({ ...article, feedColor }));
-}
-
-
 async function loadArticles(feedData) {
-    const { id: feedId, nt: expectedArticlesCount, unreadStories, feedColor } = feedData;
 
-    logger.log(`Loading articles for feed ${feedId}`);
-
-    // Return cached articles if available
-    if (articlesCache[feedId]) {
-        return articlesCache[feedId];
-    }
-
+    // eslint-disable-next-line no-undef
     mainContentSpinner.style.display = 'block'; // Show the spinner in the main content
 
-    // const articleUrls = unreadStories.map(story => story.url);
-    const fetchedArticles = await fetchHtmlResults(feedId);
+    const { id: feedId } = feedData;
 
-    // Hide the spinner in the main content
-    mainContentSpinner.style.display = 'none';
+    const selectedFeedElements = document.querySelectorAll('#feedslist div.clicked');
+    const selectedFeedIds = Array.from(selectedFeedElements).map(feedEl => feedEl.id);
+    //const selectedFeedIdsParam = encodeURIComponent(selectedFeedIds.join(','));
 
-    if (!Array.isArray(fetchedArticles)) {
-        logger.error('No articles fetched for feed:', feedId);
-        return (articlesCache[feedId] = []); // Cache and return an empty array if no articles are fetched
-    }
-
-    if (fetchedArticles.length !== expectedArticlesCount) {
-        logger.warn(`Expected ${expectedArticlesCount} articles for feed ${feedId}, but got ${fetchedArticles.length}`);
-    }
-
-    // Update articles with feed color and cache the result
-    const articlesWithColor = await updateArticlesWithColor(fetchedArticles, feedColor);
-    articlesCache[feedId] = articlesWithColor;
-
-    return articlesWithColor;
+    return loadArticlesFromEventSource(feedId, selectedFeedIds);
 }
 
-export { fetchFeeds, fetchHtmlResults, updateArticlesWithColor, loadArticles };
+
+export { fetchFeeds, loadArticles };

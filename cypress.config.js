@@ -3,6 +3,7 @@ import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
 import fs from 'fs';
 import path from 'path';
+import { login } from './src/server/auth.js';
 
 export default defineConfig({
   projectId: '5jtiwr',
@@ -23,6 +24,13 @@ export default defineConfig({
       });
 
       on('task', {
+        async loginAndGetSessionCookie(creds) {
+          const { username, password }= creds;
+          return await login(username, password).then((result) => {
+            //console.log(result);
+            return result.sessionCookie;
+          });
+        },
         getBeforeScreenshotPath() {
           return beforeScreenshotPath;
         },

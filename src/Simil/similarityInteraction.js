@@ -5,51 +5,60 @@ import { similLogger as logger } from '../logger.js';
 const MAX_RETRIES = 5;
 const DEFAULT_WAIT_TIME = 30; // in seconds
 
-class EmbeddingsFetchError extends Error {
-    constructor(message) {
-        super(message);
-        this.name = 'EmbeddingsFetchError';
-    }
-}
+// class EmbeddingsFetchError extends Error {
+//     constructor(message) {
+//         super(message);
+//         this.name = 'EmbeddingsFetchError';
+//     }
+// }
 
 async function sleep(seconds) {
     return new Promise(resolve => setTimeout(resolve, seconds * 1000));
 }
 
-async function retryRequest(texts, retries, waitTime) {
-    let response;
+async function retryRequest(articlesWithIds, retries, waitTime) {
+    let responses = [];
     for (let i = 0; i < retries; i++) {
         try {
-            response = await axios.post(
+            const response = await axios.post(
                 HUGGINGFACE_API_URL,
-                { inputs: texts },
+                { inputs: articlesWithIds.map(article => article.text) },
                 { headers: { 'Authorization': `Bearer ${HUGGINGFACE_TOKEN}` } }
             );
-            return response;
+            responses.push(...response.data);
+            break;
         } catch (error) {
             if (error.response && error.response.status === 503 && i < retries - 1) {
                 const retryWaitTime = error.response.data.estimated_time || waitTime;
                 logger.log(`API is unavailable, retrying in ${retryWaitTime} seconds...`);
                 await sleep(retryWaitTime);
             } else {
-                throw new EmbeddingsFetchError('Failed to retrieve embeddings after retries.');
+                responses.push(new Error('Failed to retrieve embeddings.'));
             }
         }
     }
-    throw new EmbeddingsFetchError('Failed to retrieve embeddings after retries.');
+    return responses;
 }
 
-async function getEmbeddings(texts) {
-    if (texts.some(text => text == null)) {
+async function getEmbeddings(articlesWithIds) {
+    if (articlesWithIds.some(article => article.text == null)) {
         throw new Error('Texts array contains null or undefined values.');
     }
 
-    const response = await retryRequest(texts, MAX_RETRIES, DEFAULT_WAIT_TIME);
-    const truncatedData = truncateDataForLogging(response.data);
+    const responses = await retryRequest(articlesWithIds, MAX_RETRIES, DEFAULT_WAIT_TIME);
+    const embeddings = responses.filter(response => !(response instanceof Error)).map((embedding, index) => ({ id: articlesWithIds[index].id, embedding }));
+    const errors = responses.filter(response => response instanceof Error).map((error, index) => ({ id: articlesWithIds[index].id, error }));
+
+    const truncatedData = truncateDataForLogging(embeddings);
     logger.log('Embeddings retrieved (truncated):', truncatedData);
 
-    return response.data;
+    errors.forEach(errorObj => {
+        console.warn(`Warning: Failed to retrieve embeddings for article ${errorObj.id}: ${errorObj.error.message}`);
+    });
+
+    return embeddings;
 }
+
 
 function truncateDataForLogging(data, maxLength = 100) {
     return JSON.stringify(data).substring(0, maxLength) + '...';

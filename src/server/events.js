@@ -1,5 +1,5 @@
 import { serverLogger as logger } from '../logger.js';
-import { createSimilarityPairs } from '../Simil/simil2.js';
+import { createSimilarityPairs } from '../Simil/simil.js';
 
 
 /**

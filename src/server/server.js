@@ -124,21 +124,20 @@ class Server {
     }
 
     try {
-
       // Acknowledge that the batch fetching process has started
       res.status(202).json({ message: 'Batch fetching started' });
 
-      // Fetch articles in batches
-      fetchArticlesInBatches(feedId, this.feeds[feedId].color, 5).then(() => {
-        // Once all batches have been fetched, call the similarity calculation
-        const cachedArticles = selectedFeedIds.flatMap(id => articleCache[id] || []);
-        if (cachedArticles.length > 0) {
-          calculateAndSendSimilarityPairs(this.clients, cachedArticles);
+      // Listen for 'articlesBatch' events and calculate similarity pairs for each batch
+      eventEmitter.on('articlesBatch', () => {
+        const selectedArticles = selectedFeedIds.flatMap(id => articleCache[id] || []);
+        const wellFormedArticles =  selectedArticles.filter(article => article && article.status === 'success');
+        if (wellFormedArticles.length > 0) {
+          calculateAndSendSimilarityPairs(this.clients, wellFormedArticles);
         }
-      }).catch((/** @type {any} */ error) => {
-        logger.error('Error fetching articles:', error);
-        res.status(500).json({ error: 'Internal server error' });
       });
+
+      // Fetch articles in batches
+      await fetchArticlesInBatches(feedId, this.feeds[feedId].color, 5);
     } catch (error) {
       logger.error('Error fetching articles:', error);
       res.status(500).json({ error: 'Internal server error' });

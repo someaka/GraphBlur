@@ -1,3 +1,6 @@
+/**
+ * @param {ArrayLike<any> | { [s: string]: any; }} feeds
+ */
 export function generateColors(feeds) {
     // Calculate the total number of feeds
     const totalFeeds = Object.keys(feeds).length;
@@ -17,8 +20,8 @@ export function generateColors(feeds) {
     // Iterate over the feeds and assign a color to each one
     for (const [feedIndex, feed] of Object.entries(feeds)) {
         // Alternate between blue and green ranges
-        const isBlue = feedIndex % 2 === 0;
-        const colorIndex = Math.floor(feedIndex / 2);
+        const isBlue = Number(feedIndex) % 2 === 0;
+        const colorIndex = Math.floor(Number(feedIndex) / 2);
         const hue = isBlue
             ? hueBlueStart + (colorIndex * stepSizeBlue) % 360
             : hueGreenStart + (colorIndex * stepSizeGreen) % 360;

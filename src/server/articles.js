@@ -14,7 +14,9 @@ class Articles {
     static instance = null;
     articleCache = {};
     userAgent = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
-    eventEmitter = new EventEmitter();
+    eventEmitter = new EventEmitter().setMaxListeners(200);
+    processingQueue = false;
+    queue = [];
 
     static getInstance() {
         if (!this.instance) {
@@ -179,36 +181,49 @@ class Articles {
      * @param {string} feedColor
      */
     async fetchArticlesInBatches(feedId, feedColor, batchSize = 5) {
-        let allArticlesWithContent = [];
-
+        if (this.processingQueue) {
+            this.queue.push({ feedId, feedColor, batchSize });
+            return;
+        }
+    
+        this.processingQueue = true;
+    
+        const allArticlesWithContent = [];
+    
         const unreadStories = this.articleCache[feedId] || [];
         const validUrls = unreadStories.filter((/** @type {{ story_permalink: string; }} */ story) =>
             typeof story.story_permalink === 'string' && story.story_permalink.startsWith('http'));
-
+    
         while (validUrls.length > 0) {
             const batch = validUrls.splice(0, batchSize);
             const promises = batch.map((/** @type {any} */ story) =>
                 this.fetchArticleWithRetry(story, feedId, feedColor));
-
+    
             const articlesWithContent = await Promise.all(promises);
-
-            // Emit an 'articlesBatch' event after fetching each batch of articles
+    
+            allArticlesWithContent.push(...articlesWithContent);
+    
+            this.articleCache[feedId] = allArticlesWithContent;
+    
             this.eventEmitter.emit('articlesBatch', articlesWithContent);
-
-            allArticlesWithContent = allArticlesWithContent.concat(articlesWithContent);
-
-            // Move failed articles back to the front of the queue
+    
             validUrls.unshift(...articlesWithContent.filter(article => article.title === '' && article.text === ''));
         }
-        // Emit a 'jobComplete' event after all batches have been processed
+    
         this.eventEmitter.emit('jobComplete');
-        
-        this.articleCache[feedId] = allArticlesWithContent;
+    
+        if (this.queue.length > 0) {
+            const nextRequest = this.queue.shift();
+            this.fetchArticlesInBatches(nextRequest.feedId, nextRequest.feedColor, nextRequest.batchSize);
+        } else {
+            this.processingQueue = false;
+        }
     }
 
 
-
 }
+
+
 
 
 const articleCache = Articles.getInstance().articleCache;
@@ -219,14 +234,16 @@ const eventEmitter = Articles.getInstance().eventEmitter;
  * @param {string} url The URL of the article to fetch.
  * @returns The fetched article.
  */
-const fetchArticle = url => Articles.getInstance().fetchArticle(url);
+const fetchArticle = url =>
+    Articles.getInstance().fetchArticle(url);
 
 /**
  * Fetches articles with content for given feed IDs.
  * @param {string | string[]} feedIds An array of feed IDs to fetch articles for.
  * @returns An array of articles with fetched content.
  */
-const fetchArticlesWithContentForFeeds = feedIds => Articles.getInstance().fetchArticlesWithContentForFeeds(feedIds);
+const fetchArticlesWithContentForFeeds = feedIds =>
+    Articles.getInstance().fetchArticlesWithContentForFeeds(feedIds);
 
 /**
  * Fetches articles in batches for a specific feed, with color and optional batch size.
@@ -235,7 +252,8 @@ const fetchArticlesWithContentForFeeds = feedIds => Articles.getInstance().fetch
  * @param {number} [batchSize=5] The batch size.
  * @returns The batch of articles with fetched content.
  */
-const fetchArticlesInBatches = (feedId, feedColor, batchSize = 5) => Articles.getInstance().fetchArticlesInBatches(feedId, feedColor, batchSize);
+const fetchArticlesInBatches = (feedId, feedColor, batchSize = 5) =>
+    Articles.getInstance().fetchArticlesInBatches(feedId, feedColor, batchSize);
 
 
 export {

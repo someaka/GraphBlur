@@ -8,18 +8,25 @@ import { EventEmitter } from 'events';
 
 
 class Articles {
+    /**
+     * @type {Articles | null}
+     */
     static instance = null;
     articleCache = {};
     userAgent = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
     eventEmitter = new EventEmitter();
 
     static getInstance() {
-        if (!Articles.instance) {
-            Articles.instance = new Articles();
+        if (!this.instance) {
+            this.instance = new Articles();
         }
-        return Articles.instance;
+        return this.instance;
     }
 
+
+    /**
+     * @param {string} url
+     */
     async fetchArticle(url) {
         if (typeof url !== 'string') {
             logger.error(`Invalid URL: ${url}`);
@@ -42,6 +49,10 @@ class Articles {
 
 
 
+    /**
+     * @param {string} htmlData
+     * @param {string} url
+     */
     async processArticle(htmlData, url) {
         try {
             // Log the URL being processed for reference
@@ -52,7 +63,7 @@ class Articles {
                 // You can pass additional options if needed
             });
 
-            if (article) {
+            if (article && article.content) {
                 // Clean the content
                 const cleanedContent = this.cleanArticleContent(article.content);
 
@@ -84,6 +95,9 @@ class Articles {
     }
 
 
+    /**
+     * @param {string} content
+     */
     cleanArticleContent(content) {
         // Define the allowed tags and attributes
         const clean = sanitizeHtml(content, {
@@ -99,6 +113,9 @@ class Articles {
         return clean; // Return the cleaned content
     }
 
+    /**
+     * @param {string | string[]} feedIds
+     */
     async fetchArticlesWithContentForFeeds(feedIds) {
         // If a single feedId is provided, convert it to an array
         if (!Array.isArray(feedIds)) {
@@ -109,10 +126,10 @@ class Articles {
 
         for (const feedId of feedIds) {
             const unreadStories = this.articleCache[feedId] || [];
-            const validUrls = unreadStories.filter(story => typeof story.story_permalink === 'string' && story.story_permalink.startsWith('http'));
+            const validUrls = unreadStories.filter((/** @type {{ story_permalink: string; }} */ story) => typeof story.story_permalink === 'string' && story.story_permalink.startsWith('http'));
 
             // Fetch content for each valid URL and assign a UUID
-            const articlesWithContent = await Promise.all(validUrls.map(async story => {
+            const articlesWithContent = await Promise.all(validUrls.map(async (/** @type {{ story_permalink: any; }} */ story) => {
                 const articleContent = await this.fetchArticle(story.story_permalink);
                 return {
                     ...articleContent,
@@ -130,6 +147,11 @@ class Articles {
 
 
 
+    /**
+     * @param {{ story_permalink: any; }} story
+     * @param {string} feedId
+     * @param {string} feedColor
+     */
     async fetchArticleWithRetry(story, feedId, feedColor) {
         try {
             const articleContent = await this.fetchArticle(story.story_permalink);
@@ -151,28 +173,36 @@ class Articles {
             };
         }
     }
-    
+
+    /**
+     * @param {string} feedId
+     * @param {string} feedColor
+     */
     async fetchArticlesInBatches(feedId, feedColor, batchSize = 5) {
         let allArticlesWithContent = [];
-    
+
         const unreadStories = this.articleCache[feedId] || [];
-        const validUrls = unreadStories.filter(story => typeof story.story_permalink === 'string' && story.story_permalink.startsWith('http'));
-    
+        const validUrls = unreadStories.filter((/** @type {{ story_permalink: string; }} */ story) =>
+            typeof story.story_permalink === 'string' && story.story_permalink.startsWith('http'));
+
         while (validUrls.length > 0) {
             const batch = validUrls.splice(0, batchSize);
-            const promises = batch.map(story => this.fetchArticleWithRetry(story, feedId, feedColor));
-    
+            const promises = batch.map((/** @type {any} */ story) =>
+                this.fetchArticleWithRetry(story, feedId, feedColor));
+
             const articlesWithContent = await Promise.all(promises);
-    
+
             // Emit an 'articlesBatch' event after fetching each batch of articles
             this.eventEmitter.emit('articlesBatch', articlesWithContent);
-    
+
             allArticlesWithContent = allArticlesWithContent.concat(articlesWithContent);
-    
+
             // Move failed articles back to the front of the queue
             validUrls.unshift(...articlesWithContent.filter(article => article.title === '' && article.text === ''));
         }
-    
+        // Emit a 'jobComplete' event after all batches have been processed
+        this.eventEmitter.emit('jobComplete');
+        
         this.articleCache[feedId] = allArticlesWithContent;
     }
 
@@ -183,9 +213,30 @@ class Articles {
 
 const articleCache = Articles.getInstance().articleCache;
 const eventEmitter = Articles.getInstance().eventEmitter;
-const fetchArticle = (...args) => Articles.getInstance().fetchArticle(...args);
-const fetchArticlesWithContentForFeeds = (...args) => Articles.getInstance().fetchArticlesWithContentForFeeds(...args);
-const fetchArticlesInBatches = (...args) => Articles.getInstance().fetchArticlesInBatches(...args);
+
+/**
+ * Fetches a single article.
+ * @param {string} url The URL of the article to fetch.
+ * @returns The fetched article.
+ */
+const fetchArticle = url => Articles.getInstance().fetchArticle(url);
+
+/**
+ * Fetches articles with content for given feed IDs.
+ * @param {string | string[]} feedIds An array of feed IDs to fetch articles for.
+ * @returns An array of articles with fetched content.
+ */
+const fetchArticlesWithContentForFeeds = feedIds => Articles.getInstance().fetchArticlesWithContentForFeeds(feedIds);
+
+/**
+ * Fetches articles in batches for a specific feed, with color and optional batch size.
+ * @param {string} feedId The ID of the feed.
+ * @param {string} feedColor The color associated with the feed.
+ * @param {number} [batchSize=5] The batch size.
+ * @returns The batch of articles with fetched content.
+ */
+const fetchArticlesInBatches = (feedId, feedColor, batchSize = 5) => Articles.getInstance().fetchArticlesInBatches(feedId, feedColor, batchSize);
+
 
 export {
     articleCache,

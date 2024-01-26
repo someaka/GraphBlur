@@ -1,3 +1,4 @@
+// @ts-nocheck
 // eslint-disable-next-line no-unused-vars
 import { similLogger as logger } from '../logger.js';
 import { getEmbeddings } from './similarityInteraction.js';

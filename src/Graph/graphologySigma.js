@@ -20,8 +20,10 @@ class SigmaGraphManager {
 
         this.graph = new Graph();
         this.renderer = new Sigma(this.graph, this.container, {
-            labelThreshold: 0, // seemingly higher means less clutter
-            enableHovering: false, // Disable built-in hover behavior
+            // ts says that setting does not exist
+            // labelThreshold: 0, // seemingly higher means less clutter, 
+            // enableHovering: false, // Disable built-in hover behavior
+            //
             renderLabels: true, // Disable automatic label rendering   
             allowInvalidContainer: true, //shusshes cypress
             // nodeProgramClasses: {

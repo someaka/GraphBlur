@@ -7,7 +7,7 @@ import { login } from './auth.js';
 import { calculateAndSendSimilarityPairs } from './events.js';
 import { articleCache, fetchArticlesInBatches, eventEmitter } from './articles.js';
 import { serverLogger as logger } from '../logger.js';
-import { fetchFeeds, fetchStories } from './serverFeedFetcher2.js';
+import { fetchFeeds, fetchStories } from './serverFeedFetcher.js';
 import { generateColors } from '../utils/colorUtils.js';
 
 
@@ -55,7 +55,9 @@ class Server {
     }
   }
 
-  handleLogin = async (req, res) => {
+  handleLogin = async (/** @type {{ body: { username: any; password?: "" | undefined; }; }} */ req, /** @type {{ status: (arg0: number) => { (): any; new (): any; json: { (arg0: { error?: any; authenticated?: boolean; }): void; new (): any; }; }; cookie: (arg0: string, arg1: string | undefined, arg2: { httpOnly: boolean; // The cookie is not accessible via JavaScript
+    secure: boolean; sameSite: string; maxAge: number; // The cookie will expire after 1 hour
+     }) => void; }} */ res) => {
     const { username, password = '' } = req.body; // Default password to an empty string if not provided
     if (!username) {
       return res.status(400).json({ error: 'Username is required' });
@@ -81,7 +83,7 @@ class Server {
   };
 
 
-  handleGetFeeds = async (req, res) => {
+  handleGetFeeds = async (/** @type {{ cookies: { [x: string]: any; }; }} */ req, /** @type {{ status: (arg0: number) => { (): any; new (): any; send: { (arg0: string): void; new (): any; }; }; }} */ res) => {
     const sessionCookie = req.cookies['sessionid'];
     try {
       this.feeds = await fetchFeeds(sessionCookie);
@@ -100,15 +102,20 @@ class Server {
       });
 
       await Promise.all(promises);
-      res.status(200).send(feedsWithUnreadStories);
+      res.status(200).send(JSON.stringify(feedsWithUnreadStories));
     } catch (error) {
       logger.error('Error processing feeds request:', error);
       res.status(500).send('Internal server error');
     }
   };
 
-
-
+  /**
+   * @param {Object} req - The request object.
+   * @param {Object} req.body - The request object.
+   * @param {string} req.body.feedId - The feed ID.
+   * @param {string[]} req.body.selectedFeedIds - The selected feed IDs.
+   * @param {Object} res - The response object.
+   */
   handleFetchArticles = async (req, res) => {
     // const sessionCookie = req.headers.cookie;
     const { feedId, selectedFeedIds } = req.body;
@@ -128,7 +135,7 @@ class Server {
         if (cachedArticles.length > 0) {
           calculateAndSendSimilarityPairs(this.clients, cachedArticles);
         }
-      }).catch(error => {
+      }).catch((/** @type {any} */ error) => {
         logger.error('Error fetching articles:', error);
         res.status(500).json({ error: 'Internal server error' });
       });
@@ -140,26 +147,26 @@ class Server {
 
 
 
-  handleBatchArticles = async (req, res) => {
+  handleBatchArticles = async (/** @type {any} */ req, /** @type {{ setHeader: (arg0: string, arg1: string) => void; write: (arg0: string) => void; }} */ res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
     // Function to send a batch of articles as an SSE
-    const sendBatch = (articlesWithContent) => {
+    const sendBatch = (/** @type {any} */ articlesWithContent) => {
       res.write(`event: articlesBatch\ndata: ${JSON.stringify({ articles: articlesWithContent })}\n\n`);
       //logger.log("Articles sent to client:", articlesWithContent);
     };
 
     // Listen for 'articlesBatch' events and send them to the client
-    eventEmitter.on('articlesBatch', (articlesWithContent) => {
+    eventEmitter.on('articlesBatch', (/** @type {any} */ articlesWithContent) => {
       sendBatch(articlesWithContent);
     });
     // logger.log("EventEmitter:", eventEmitter);
   };
 
 
-  handleEvents = (req, res) => {
+  handleEvents = (/** @type {{ on: (arg0: string, arg1: () => void) => void; }} */ req, /** @type {{ setHeader: (arg0: string, arg1: string) => void; }} */ res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');

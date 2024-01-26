@@ -8,6 +8,7 @@ const articlesElement = document.querySelector('#articles');
 
 function toggleMainContent(show) {
     // Slide the panel into view if show is true, otherwise slide it out of view
+    // @ts-ignore
     mainContentElement.style.right = show ? '0px' : '-40%';
 }
 
@@ -21,6 +22,7 @@ function pointArticleFromNode(color, articleId) {
     // Find the feed element with the matching color
     const selectedFeedElements = document.querySelectorAll('#feedslist div.clicked');
     const feedElements = Array.from(selectedFeedElements);
+    // @ts-ignore
     const feedElement = feedElements.find(el => el.dataset.originalColor === color);
 
     if (feedElement) {
@@ -48,6 +50,7 @@ async function displayArticles(feedData) {
     const { id: feedId } = feedData;
 
     // Clear previous articles
+    // @ts-ignore
     articlesElement.innerHTML = '';
 
     // Check if articles are cached
@@ -61,32 +64,6 @@ async function displayArticles(feedData) {
 
 
 
-const articleTemplate = document.querySelector('#articleTemplate');
-
-function updateArticlesUI(article) {
-    // Check if an article container for this UUID already exists
-    //broken ?
-    const articleElement = articlesElement.querySelector(`.article[data-id="${article.id}"]`);
-    logger.log("updated article element :", articleElement, "article id:", article.id);
-
-    if (articleElement) {
-        // Article already exists, update its content
-        const contentElement = articleElement.querySelector('.content');
-        if (contentElement) contentElement.innerHTML = article.content;
-    } else {
-        // Article is new, use the template to create a new element and append it to the list of articles
-        const articleTemplateClone = articleTemplate.content.cloneNode(true);
-        const newArticleElement = articleTemplateClone.querySelector('.article');
-        newArticleElement.dataset.id = article.id; // Set the data-id attribute to the article's UUID
-
-        const titleElement = newArticleElement.querySelector('.title');
-        const textElement = newArticleElement.querySelector('.text');
-        titleElement.textContent = article.title;
-        textElement.innerHTML = article.content;
-
-        articlesElement.appendChild(newArticleElement);
-    }
-}
 
 
 // This function is responsible for creating and displaying a single article in the UI
@@ -112,6 +89,7 @@ function createAndDisplayArticle(articleData) {
         failedMessage.style.color = 'red'; // Assign a red color to indicate failure
         articleContainer.appendChild(failedMessage);
     }
+    // @ts-ignore
     articlesElement.appendChild(articleContainer);
 }
 
@@ -129,7 +107,6 @@ function displayArticlesFromCache(feedId) {
 
 export {
     displayArticles,
-    updateArticlesUI,
     displayArticlesFromCache,
     createAndDisplayArticle,
     

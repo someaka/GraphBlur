@@ -31,20 +31,75 @@ eventSource.addEventListener('similarityPairsUpdate', (event) => {
 });
 
 
+/**
+ * @param {EventSource} eventSource
+ * @param {string} feedId
+ */
+// eslint-disable-next-line no-unused-vars
 function waitForEventSourceClose(eventSource, feedId) {
     return new Promise((resolve) => {
-        eventSource.onclose = () => {
+        // Listen for the 'jobComplete' event
+        eventSource.addEventListener('jobComplete', () => {
             resolve(articlesCache[feedId]);
-        };
+        });
+        eventSource.close();
+        console.log('EventSource closed with jobComplete event listener');
     });
 }
 
 
-async function loadArticlesFromEventSource(feedId, selectedFeedIdsParam) {
 
-    logger.log("Loading articles with feedId:", feedId, "and selectedFeedIds:", selectedFeedIdsParam);
 
-    // Send a POST request to /fetch-articles with feedId and selectedFeedIds
+/**
+ * @param {{ data: string; }} event
+ */
+function handleArticlesBatch(event) {
+    const batch = JSON.parse(event.data).articles;
+
+    batch.forEach((/** @type {any} */ article) => {
+        cacheArticle(article);
+        createAndDisplayArticle(article);
+    });
+
+    updateGraphForSelectedFeeds();
+
+    // Hide the spinner in the main content
+    // @ts-ignore
+    // eslint-disable-next-line no-undef
+    mainContentSpinner.style.display = 'none';
+}
+
+
+
+
+
+
+async function handleEventSource() {
+    const eventSource = new EventSource(ARTICLES_BATCH_EVENT);
+
+    eventSource.onmessage = (event) => {
+        logger.log('Received Message:', event);
+    };
+
+    eventSource.addEventListener('articlesBatch', handleArticlesBatch);
+
+    eventSource.onerror = (error) => {
+        logger.error('Error while loading articles:', error);
+        logger.error(`EventSource readyState: ${eventSource.readyState}`);
+        logger.error(`EventSource URL: ${eventSource.url}`);
+        eventSource.close();
+    };
+
+    // articles don't show when this is used ?!?
+    // return waitForEventSourceClose(eventSource, feedId);
+}
+
+
+/**
+ * @param {string} feedId
+ * @param {string[]} selectedFeedIdsParam
+ */
+async function sendPostRequest(feedId, selectedFeedIdsParam) {
     const response = await fetch(`${EVENTSOURCE_URL}`, {
         method: 'POST',
         headers: {
@@ -59,44 +114,19 @@ async function loadArticlesFromEventSource(feedId, selectedFeedIdsParam) {
 
     logger.log("parsed response:", response);
 
-    // Create a new EventSource for /batch-articles
-    const eventSource = new EventSource(ARTICLES_BATCH_EVENT);
+    return response;
+}
 
-    eventSource.onmessage = (event) => {
-        logger.log('Received Message:', event);
-    };
+/**
+ * @param {string} feedId
+ * @param {string[]} selectedFeedIdsParam
+ */
+async function loadArticlesFromEventSource(feedId, selectedFeedIdsParam) {
+    logger.log("Loading articles with feedId:", feedId, "and selectedFeedIds:", selectedFeedIdsParam);
 
+    await sendPostRequest(feedId, selectedFeedIdsParam);
 
-    eventSource.addEventListener('articlesBatch', async (event) => {
-        // logger.log('Received event:', event);
-        const batch = JSON.parse(event.data).articles;
-        //logger.log('batch is an array:', Array.isArray(batch));
-
-        batch.forEach(article => {
-            cacheArticle(article);
-            createAndDisplayArticle(article);
-        });
-
-        updateGraphForSelectedFeeds();
-
-        // logger.log("Articles received by client:", batch);
-
-        // Hide the spinner in the main content
-        // eslint-disable-next-line no-undef
-        mainContentSpinner.style.display = 'none';
-    });
-
-
-    eventSource.onerror = (error) => {
-        logger.error('Error while loading articles:', error);
-        logger.error(`EventSource readyState: ${eventSource.readyState}`);
-        logger.error(`EventSource URL: ${eventSource.url}`);
-        eventSource.close();
-    };
-
-    logger.log("eventSource:", eventSource);
-
-    return waitForEventSourceClose(eventSource, feedId);
+    return handleEventSource();
 }
 
 export {

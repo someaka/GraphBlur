@@ -20,8 +20,12 @@ async function fetchFeeds() {
 }
 
 
+/**
+ * @param {{ id: string; }} feedData
+ */
 async function loadArticles(feedData) {
 
+    // @ts-ignore
     // eslint-disable-next-line no-undef
     mainContentSpinner.style.display = 'block'; // Show the spinner in the main content
 

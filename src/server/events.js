@@ -2,20 +2,26 @@ import { serverLogger as logger } from '../logger.js';
 import { createSimilarityPairs } from '../Simil/simil2.js';
 
 
+/**
+ * @param {any[]} clients
+ * @param {{}} similarityPairs
+ */
 function sendSimilarityPairsUpdate(clients, similarityPairs) {
-  clients.forEach(clientRes => {
+  clients.forEach((/** @type {{ write: (arg0: string) => void; }} */ clientRes) => {
     clientRes.write(`event: similarityPairsUpdate\ndata: ${JSON.stringify(similarityPairs)}\n\n`);
   });
 }
 
-// Define a separate function for similarity Pairs calculation
+/**
+ * @param {any[]} clients
+ * @param {Array<{article: {title: string, text: string}}>} articlesWithContent
+ */
 async function calculateAndSendSimilarityPairs(clients, articlesWithContent) {
   try {
-    // cached articles are missing
-    
-    
     const filteredArticles = articlesWithContent
-      .filter(article => article && article.article && article.article.title && article.article.text);
+      .filter((article) =>
+        article && article.article && article.article.title && article.article.text);
+
     const similarityPairs = await createSimilarityPairs(filteredArticles);
     sendSimilarityPairsUpdate(clients, similarityPairs); // Make sure to pass the clients array
     // logger.log("similarity Pairs sent", similarityPairs);
@@ -23,6 +29,7 @@ async function calculateAndSendSimilarityPairs(clients, articlesWithContent) {
     logger.warn('Error calculating similarity Pairs:', error);
   }
 }
+
 
 export {
   calculateAndSendSimilarityPairs

@@ -1,56 +1,99 @@
-// @ts-nocheck
-// eslint-disable-next-line no-unused-vars
-import { similLogger as logger } from '../logger.js';
 import { getEmbeddings } from './similarityInteraction.js';
 import { createWorkerPool, terminateWorkerPool } from '../utils/workerSupport.js';
 import { cpus } from 'os';
-// eslint-disable-next-line no-unused-vars
-import { articleCache } from '../server/articles.js';
 
+// Define constants at the top of the file
+const EMBEDDINGS_CALL_INTERVAL = 5000;
+const RETRY_TASK_NUMBER = 3;
 
-// class ArticleError extends Error {
-//     constructor(message) {
-//         super(message);
-//         this.name = 'ArticleError';
-//     }
-// }
-
-class Queue {
-    constructor() {
+class CustomQueue {
+    constructor(newSimilarityInstance) {
         this.items = [];
+        this.cooldown = false;
+        this.cooldownTimeout = null;
+        this.newSimilarityInstance = newSimilarityInstance;
+
     }
 
     enqueue(item) {
+        if (typeof item !== 'function') {
+            console.error('Attempted to enqueue a non-function item:', item);
+            return;
+        }
         this.items.push(item);
-    }
-
-    dequeue() {
-        if (this.items.length > 0) {
-            return this.items.shift();
+        if (!this.cooldown && this.items.length === 1) {
+            this.processItems();
         }
     }
 
-    peek() {
-        return this.items[this.items.length - 1];
+    dequeue() {
+        return this.items.shift();
+    }
+
+    async processItems() {
+        if (this.cooldown) {
+            return;
+        }
+
+        // Set cooldown before processing items
+        this.setCooldown();
+
+        // Process each item (function) in the queue
+        while (this.items.length > 0) {
+            const task = this.items.shift(); // Dequeue the next task
+            await task(); // Execute the task, which should internally call updateEmbeddingsCache
+        }
+    }
+
+    setCooldown() {
+        this.cooldown = true;
+        this.cooldownTimeout = setTimeout(() => {
+            this.cooldown = false;
+            if (this.items.length > 0) {
+                this.processItems();
+            }
+        }, 5000);
+    }
+
+    clearCooldown() {
+        this.cooldownTimeout = 0
+        this.cooldown = false;
+    }
+
+    clear() {
+        this.items = [];
     }
 
     isEmpty() {
         return this.items.length === 0;
     }
-
-    size() {
-        return this.items.length;
-    }
 }
 
 
-class Similarity {
+
+class NewSimilarity {
+    /**
+     * @type {NewSimilarity | null}
+     */
+    static instance = null;
+
+
+    static getInstance() {
+        if (!this.instance) {
+            this.instance = new NewSimilarity();
+        }
+        return this.instance;
+    }
+
+
     constructor() {
         this.embeddingsCache = {};
-        this.similarityPairs = {}; // Object to store similarity scores for article pairs
+        this.similarityPairs = {};
         this.numCPUs = Math.max(1, cpus().length / 2 - 1);
         this.workerPool = createWorkerPool(this.numCPUs);
-        this.taskQueue = new Queue();
+        this.taskQueue = new CustomQueue(this);
+        this.lastEmbeddingsCallTime = Date.now();
+        this.queuedArticles = [];
     }
 
     async calculateSimilarityPairs(articles) {
@@ -60,6 +103,7 @@ class Similarity {
         // Process tasks concurrently
         while (!this.taskQueue.isEmpty()) {
             const task = this.taskQueue.dequeue();
+            console.log(typeof task); // Add this line for debugging
             await task();
         }
 
@@ -78,83 +122,105 @@ class Similarity {
         await this.updateSimilarityPairs(articles);
     }
 
-
-
     async updateEmbeddingsCache(articles) {
+        const currentTime = Date.now();
+        // Filter out articles already in cache
         const newArticles = articles.filter(article => !this.embeddingsCache[article.id]);
+
         if (newArticles.length > 0) {
-            const articlesWithIds = this.extractTextsFromArticles(newArticles);
-            const embeddingsResults = await getEmbeddings(articlesWithIds);
-            embeddingsResults.forEach(result => {
-                this.embeddingsCache[result.id] = result.embedding;
-            });
-        }
-    }
+            // If we're within the cooldown period, enqueue articles for later processing
+            if (currentTime - this.lastEmbeddingsCallTime < EMBEDDINGS_CALL_INTERVAL) {
+                this.queuedArticles = this.queuedArticles.concat(newArticles);
+            } else {
+                // If cooldown is over, include any queued articles in the batch
+                const articlesToProcess = this.queuedArticles.concat(newArticles);
+                this.queuedArticles = []; // Clear the queue
 
+                const articlesWithIds = this.extractTextsFromArticles(articlesToProcess);
+                const embeddingsResults = await getEmbeddings(articlesWithIds);
+                embeddingsResults.forEach(result => {
+                    this.embeddingsCache[result.id] = result.embedding;
+                });
 
-    async updateSimilarityPairs(articles) {
-        // Initialize worker pool if not already initialized
-        if (!this.workerPool) {
-            this.workerPool = createWorkerPool(this.numCPUs);
-        }
-
-        // Generate tasks for each pair of articles
-        const tasks = this.generateTasks(articles);
-
-        // Process each task sequentially
-        for (const task of tasks) {
-            await this.processTask(this.workerPool, task);
-        }
-
-        // Wait for all workers to complete their tasks
-        // if (this.workerPool) {
-        //     await this.waitForAllWorkers(this.workerPool);
-        // }
-
-        // terminateWorkerPool(this.workerPool);
-        // this.workerPool = null;
-    }
-
-    *generateTasks(articles) {
-        for (let i = 0; i < articles.length; i++) {
-            for (let j = i + 1; j < articles.length; j++) {
-                const id1 = articles[i].id;
-                const id2 = articles[j].id;
-                const pairKey = `${id1}_${id2}`;
-                // Skip if similarity score already calculated
-                if (this.similarityPairs[pairKey] !== undefined) continue;
-                yield { id1, id2, pairKey };
+                this.lastEmbeddingsCallTime = currentTime;
+                // Clear the task queue if necessary, or process next items
+                this.taskQueue.clear();
             }
         }
     }
 
-    async processTask(workerPool, { id1, id2, pairKey }) {
+    async updateSimilarityPairs(articles) {
+        try {
+            // Initialize worker pool if not already initialized
+            if (!this.workerPool) {
+                this.workerPool = createWorkerPool(this.numCPUs);
+            }
+    
+            // Generate tasks for each pair of articles
+            const tasks = this.generateTasks(articles);
+    
+            // Enqueue tasks for processing
+            for (const task of tasks) {
+                this.taskQueue.enqueue(() => this.processTask(this.workerPool, task));
+            }
+    
+            // Process tasks concurrently
+            while (!this.taskQueue.isEmpty()) {
+                const tasksToProcess = Array.from({ length: this.numCPUs }, () => this.taskQueue.dequeue());
+                await Promise.all(tasksToProcess.map(task => task()))
+                    .catch(error => console.error(`Error processing task: ${error}`));
+            }
+    
+            // Terminate worker pool
+            if (this.workerPool) {
+                terminateWorkerPool(this.workerPool);
+                // @ts-ignore
+                this.workerPool = null;
+            }
+        } catch (error) {
+            console.error(`Error in updateSimilarityPairs: ${error}`);
+        }
+    }
+
+
+    async processTask(workerPool, task, retries = RETRY_TASK_NUMBER) {
         const worker = await this.getAvailableWorker(workerPool);
-        return new Promise((resolve, reject) => {
+        return new Promise((/** @type {(value?: any) => void} */resolve, reject) => {
             const handleMessage = (message) => {
                 worker.removeListener('error', handleError); // Clean up the error listener
+                worker.removeListener('message', handleMessage); // Clean up the message listener
                 if (message.error) {
                     reject(new Error(message.error));
                 } else {
-                    this.similarityPairs[pairKey] = message.similarity;
+                    this.similarityPairs[task.pairKey] = message.similarity;
                     resolve();
                 }
             };
             const handleError = (error) => {
+                worker.removeListener('error', handleError); // Clean up the error listener
                 worker.removeListener('message', handleMessage); // Clean up the message listener
-                reject(error);
+                reject(new Error(`Error processing task ${task.pairKey}: ${error}`));
             };
             worker.once('message', handleMessage);
             worker.once('error', handleError);
             worker.postMessage({
-                vector1: this.embeddingsCache[id1],
-                vector2: this.embeddingsCache[id2],
-                indexI: id1,
-                indexJ: id2
+                vector1: this.embeddingsCache[task.id1],
+                vector2: this.embeddingsCache[task.id2],
+                indexI: task.id1,
+                indexJ: task.id2
             });
+        }).finally(() => {
+            // Ensure the worker is always marked as available, even if an error occurs
+            worker.busy = false;
+        }).catch(error => {
+            // If an error occurred, retry the task with a new worker
+            if (retries > 0) {
+                this.taskQueue.enqueue(() => this.processTask(this.workerPool, task, retries - 1));
+            } else {
+                console.error(`Failed to process task after ${retries} attempts: ${error}`);
+            }
         });
     }
-
 
     async getAvailableWorker(workerPool) {
         if (workerPool) {
@@ -175,25 +241,18 @@ class Similarity {
         }
     }
 
-
-
-    waitForAllWorkers(workerPool) {
-        // This function should return a promise that resolves when all workers have completed their tasks
-        const allWorkersDonePromises = workerPool.workers.map(worker => new Promise((resolve) => {
-            if (worker.busy) {
-                const onWorkerDone = () => {
-                    worker.removeListener('workerAvailable', onWorkerDone);
-                    resolve();
-                };
-                worker.onmessage = onWorkerDone;
-            } else {
-                resolve();
+    *generateTasks(articles) {
+        for (let i = 0; i < articles.length; i++) {
+            for (let j = i + 1; j < articles.length; j++) {
+                const id1 = articles[i].id;
+                const id2 = articles[j].id;
+                const pairKey = `${id1}_${id2}`;
+                // Skip if similarity score already calculated
+                if (this.similarityPairs[pairKey] !== undefined) continue;
+                yield { id1, id2, pairKey };
             }
-        }));
-
-        return Promise.all(allWorkersDonePromises);
+        }
     }
-
 
     assignZeroSimilarity(article, articles) {
         articles.forEach(otherArticle => {
@@ -215,19 +274,15 @@ class Similarity {
         });
     }
 
-
-
     extractTextsFromArticles(articles) {
         return articles.map(article => ({ id: article.id, text: `${article.article.title} ${article.article.text}`.replace(/<[^>]*>/g, '') }));
     }
 
+
 }
 
-const sim = new Similarity();
 
-// Wrapper functions to use the class
-function createSimilarityPairs(articles) {
-    return sim.calculateSimilarityPairs(articles);
-}
+const createSimilarityPairs = (articles) => NewSimilarity.getInstance().calculateSimilarityPairs(articles);
+
 
 export { createSimilarityPairs };

@@ -36,7 +36,7 @@ class Logger {
 export const serverLogger       = new Logger(true); 
 export const clientLogger       = new Logger(false); 
 export const feedsLogger        = new Logger(false); 
-export const similLogger        = new Logger(false);
+export const similLogger        = new Logger(true);
 export const graphLogger        = new Logger(false); 
 export const visualGraphLogger  = new Logger(false); 
 export const forceAtlasLogger   = new Logger(false); 

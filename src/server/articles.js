@@ -16,7 +16,7 @@ class Articles {
     userAgent = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
     eventEmitter = new EventEmitter().setMaxListeners(200);
     processingQueue = false;
-    queue = [];
+    requestQueue = [];
 
     static getInstance() {
         if (!this.instance) {
@@ -181,43 +181,48 @@ class Articles {
      * @param {string} feedColor
      */
     async fetchArticlesInBatches(feedId, feedColor, batchSize = 5) {
+        this.requestQueue.push({ feedId, feedColor, batchSize });
+
         if (this.processingQueue) {
-            this.queue.push({ feedId, feedColor, batchSize });
             return;
         }
-    
+
         this.processingQueue = true;
-    
+
+        while (this.requestQueue.length > 0) {
+            const nextRequest = this.requestQueue.shift();
+            await this.processNextRequest(nextRequest);
+        }
+
+        this.processingQueue = false;
+    }
+
+    async processNextRequest(request) {
+        const { feedId, feedColor, batchSize } = request;
+
         const allArticlesWithContent = [];
-    
+
         const unreadStories = this.articleCache[feedId] || [];
         const validUrls = unreadStories.filter((/** @type {{ story_permalink: string; }} */ story) =>
             typeof story.story_permalink === 'string' && story.story_permalink.startsWith('http'));
-    
+
         while (validUrls.length > 0) {
             const batch = validUrls.splice(0, batchSize);
             const promises = batch.map((/** @type {any} */ story) =>
                 this.fetchArticleWithRetry(story, feedId, feedColor));
-    
+
             const articlesWithContent = await Promise.all(promises);
-    
+
             allArticlesWithContent.push(...articlesWithContent);
-    
+
             this.articleCache[feedId] = allArticlesWithContent;
-    
+
             this.eventEmitter.emit('articlesBatch', articlesWithContent);
-    
+
             validUrls.unshift(...articlesWithContent.filter(article => article.title === '' && article.text === ''));
         }
-    
+
         this.eventEmitter.emit('jobComplete');
-    
-        if (this.queue.length > 0) {
-            const nextRequest = this.queue.shift();
-            this.fetchArticlesInBatches(nextRequest.feedId, nextRequest.feedColor, nextRequest.batchSize);
-        } else {
-            this.processingQueue = false;
-        }
     }
 
 

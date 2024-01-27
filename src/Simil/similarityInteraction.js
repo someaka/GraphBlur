@@ -5,12 +5,7 @@ import { similLogger as logger } from '../logger.js';
 const MAX_RETRIES = 5;
 const DEFAULT_WAIT_TIME = 30; // in seconds
 
-// class EmbeddingsFetchError extends Error {
-//     constructor(message) {
-//         super(message);
-//         this.name = 'EmbeddingsFetchError';
-//     }
-// }
+
 
 async function sleep(seconds) {
     return new Promise(resolve => setTimeout(resolve, seconds * 1000));

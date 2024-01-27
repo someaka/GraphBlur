@@ -28,7 +28,8 @@ async function retryRequest(articlesWithIds, retries, waitTime) {
                 logger.log(`API is unavailable, retrying in ${retryWaitTime} seconds...`);
                 await sleep(retryWaitTime);
             } else {
-                responses.push(new Error('Failed to retrieve embeddings.'));
+                responses.push(new Error('Failed to retrieve embeddings : ' + error.message));
+                break;
             }
         }
     }

@@ -36,8 +36,8 @@ class SigmaGraphManager {
         this.settings = {
             isNodeFixed: (_, attr) => attr.highlighted,
             settings: {
-                attraction: 0.0001,
-                repulsion: 0.1,
+                attraction: 0.00001,
+                repulsion: 0.2,
                 gravity: 0.0001,
                 inertia: 0.6,
                 maxMove: 5

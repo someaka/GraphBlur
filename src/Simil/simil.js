@@ -102,6 +102,7 @@ class Similarity {
         this.taskQueue = new CustomQueue(this);
         this.lastEmbeddingsCallTime = Date.now();
         this.queuedArticles = [];
+
     }
 
     /**
@@ -147,7 +148,7 @@ class Similarity {
                 embeddingsResults.forEach(result => {
                     this.embeddingsCache[result.id] = result.embedding;
                 });
-                
+
                 this.queuedArticles = []; // Clear the queue
                 this.lastEmbeddingsCallTime = currentTime;
                 // Clear the task queue if necessary, or process next items
@@ -317,12 +318,10 @@ class Similarity {
                     availableWorker.busy = true;
                     resolve(availableWorker.worker);
                 } else {
-                    const onWorkerAvailable = (/** @type {{ busy: boolean; }} */ worker) => {
-                        workerPool.removeListener('workerAvailable', onWorkerAvailable);
+                    workerPool.once('workerAvailable', (worker) => {
                         worker.busy = true;
                         resolve(worker);
-                    };
-                    workerPool.on('workerAvailable', onWorkerAvailable);
+                    });
                 }
             });
         }

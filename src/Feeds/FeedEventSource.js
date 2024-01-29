@@ -4,8 +4,6 @@ import { getApiBaseUrl } from '../utils/apiConfig.js';
 import { articlesCache, cacheArticle } from './data/FeedCache.js';
 import { createAndDisplayArticle } from './ui/FeedUI.js';
 import { inflateSync } from 'fflate';
-import { Buffer } from 'buffer';
-// import { TextDecoder } from 'text-encoder-lite';
 
 
 const baseUrl = getApiBaseUrl();

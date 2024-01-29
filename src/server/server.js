@@ -25,6 +25,34 @@ class Server {
     this.app = express();
     this.configureMiddleware();
     this.setupRoutes();
+
+    this.currentRes = null;
+
+    this.selectedFeedIds = [];
+    this.feedId = '';
+    this.eventEmitter = eventEmitter;
+    this.onBatchArticles = this.onBatchArticles.bind(this);
+
+    this.initializeEventHandlers();
+  }
+
+  initializeEventHandlers() {
+    this.eventEmitter.on('articlesBatch', this.onBatchArticles);
+  }
+
+  onBatchArticles(articlesWithContent) {
+    if (this.selectedFeedIds) {
+      const selectedArticles = this.selectedFeedIds.flatMap(id => articleCache[id] || []);
+      const wellFormedArticles = selectedArticles.filter(article => article && article.status === 'success');
+      if (wellFormedArticles.length > 0) {
+        calculateAndSendSimilarityPairs(this.clients, wellFormedArticles);
+      }
+    }
+
+    if (this.currentRes) {
+      this.currentRes.write(`event: articlesBatch\ndata: ${JSON.stringify({ articles: articlesWithContent })}\n\n`);
+    }
+
   }
 
   configureMiddleware() {
@@ -117,24 +145,18 @@ class Server {
    * @param {Object} res - The response object.
    */
   handleFetchArticles = async (req, res) => {
-    // const sessionCookie = req.headers.cookie;
     const { feedId, selectedFeedIds } = req.body;
     if (!feedId || (!Array.isArray(selectedFeedIds) && typeof selectedFeedIds !== 'string')) {
       return res.status(400).json({ error: 'Feed ID and selected feed IDs are required' });
     }
 
     try {
+      // Update the class variables
+      this.selectedFeedIds = selectedFeedIds;
+      this.feedId = feedId;
+
       // Acknowledge that the batch fetching process has started
       res.status(202).json({ message: 'Batch fetching started' });
-
-      // Listen for 'articlesBatch' events and calculate similarity pairs for each batch
-      eventEmitter.on('articlesBatch', () => {
-        const selectedArticles = selectedFeedIds.flatMap(id => articleCache[id] || []);
-        const wellFormedArticles =  selectedArticles.filter(article => article && article.status === 'success');
-        if (wellFormedArticles.length > 0) {
-          calculateAndSendSimilarityPairs(this.clients, wellFormedArticles);
-        }
-      });
 
       // Fetch articles in batches
       await fetchArticlesInBatches(feedId, this.feeds[feedId].color, 5);
@@ -150,18 +172,7 @@ class Server {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-
-    // Function to send a batch of articles as an SSE
-    const sendBatch = (/** @type {any} */ articlesWithContent) => {
-      res.write(`event: articlesBatch\ndata: ${JSON.stringify({ articles: articlesWithContent })}\n\n`);
-      //logger.log("Articles sent to client:", articlesWithContent);
-    };
-
-    // Listen for 'articlesBatch' events and send them to the client
-    eventEmitter.on('articlesBatch', (/** @type {any} */ articlesWithContent) => {
-      sendBatch(articlesWithContent);
-    });
-    // logger.log("EventEmitter:", eventEmitter);
+    this.currentRes = res;
   };
 
 

@@ -108,15 +108,8 @@ class Similarity {
      * @param {any} articles
      */
     async calculateSimilarityPairs(articles) {
-        // Enqueue the entire process
-        this.taskQueue.enqueue(() => this.processArticles(articles));
-
-        // Process tasks concurrently
-        while (!this.taskQueue.isEmpty()) {
-            const task = this.taskQueue.dequeue();
-            //console.log(typeof task); // Add this line for debugging
-            await task();
-        }
+        // Process articles
+        await this.processArticles(articles);
 
         // Return the updated similarity pairs
         return this.similarityPairs;
@@ -145,20 +138,17 @@ class Similarity {
         const newArticles = articles.filter((/** @type {{ id: string | number; }} */ article) => !this.embeddingsCache[article.id]);
 
         if (newArticles.length > 0) {
-            // If we're within the cooldown period, enqueue articles for later processing
-            if (currentTime - this.lastEmbeddingsCallTime < EMBEDDINGS_CALL_INTERVAL) {
-                this.queuedArticles = this.queuedArticles.concat(newArticles);
-            } else {
-                // If cooldown is over, include any queued articles in the batch
-                const articlesToProcess = this.queuedArticles.concat(newArticles);
-                this.queuedArticles = []; // Clear the queue
-
-                const articlesWithIds = this.extractTextsFromArticles(articlesToProcess);
+            this.queuedArticles = this.queuedArticles.concat(newArticles);
+            if (currentTime - this.lastEmbeddingsCallTime > EMBEDDINGS_CALL_INTERVAL) {
+                // Remove duplicates in queuedArticles
+                this.queuedArticles = Array.from(new Set(this.queuedArticles));
+                const articlesWithIds = this.extractTextsFromArticles(this.queuedArticles);
                 const embeddingsResults = await getEmbeddings(articlesWithIds);
                 embeddingsResults.forEach(result => {
                     this.embeddingsCache[result.id] = result.embedding;
                 });
-
+                
+                this.queuedArticles = []; // Clear the queue
                 this.lastEmbeddingsCallTime = currentTime;
                 // Clear the task queue if necessary, or process next items
                 this.taskQueue.clear();
@@ -248,7 +238,8 @@ class Similarity {
             // Enqueue a single task to update the embeddings for each unique article
             for (const articleId of articlesToUpdate) {
                 const missingArticles = articles.filter((/** @type {{ id: any; }} */ article) => article.id === articleId);
-                this.taskQueue.enqueue(() => this.processArticles(missingArticles));
+                // Adds missingArticles to the article queue
+                this.queuedArticles = this.queuedArticles.concat(missingArticles);
             }
 
             // Process tasks concurrently

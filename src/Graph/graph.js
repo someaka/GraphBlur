@@ -90,16 +90,8 @@ class Graph {
         const index = Math.floor(percentile * sortedWeights.length);
         const threshold = sortedWeights[index];
     
-        // Log the number of edges before filtering
-        console.log(`Number of edges before filtering: ${edges.length}`);
-    
-        // Filter out edges below the threshold
-        const filteredEdges = edges.filter((/** @type {{ weight: number; }} */ edge) => this.normalizeEdgeWeight(edge.weight) >= threshold);
-    
-        // Log the number of edges after filtering
-        console.log(`Number of edges after filtering: ${filteredEdges.length}`);
-    
-        return filteredEdges;
+        return edges.filter((/** @type {{ weight: number; }} */ edge) => this.normalizeEdgeWeight(edge.weight) >= threshold);
+
     }
 
     normalizeEdgeWeight(edgeWeight) {

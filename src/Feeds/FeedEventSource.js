@@ -3,6 +3,10 @@ import { updateGraphForSelectedFeeds } from '../Graph/graph.js';
 import { getApiBaseUrl } from '../utils/apiConfig.js';
 import { articlesCache, cacheArticle } from './data/FeedCache.js';
 import { createAndDisplayArticle } from './ui/FeedUI.js';
+import { inflateSync } from 'fflate';
+import { Buffer } from 'buffer';
+// import { TextDecoder } from 'text-encoder-lite';
+
 
 const baseUrl = getApiBaseUrl();
 
@@ -19,17 +23,36 @@ function setupEventSource() {
     return eventSource;
 }
 
+
+function uint8ArrayToMap(uint8Array) {
+    const decoder = new TextDecoder();
+    const jsonStr = decoder.decode(uint8Array);
+    return new Map(JSON.parse(jsonStr));
+}
+
+
+
 export const eventSource = setupEventSource();
 
 eventSource.addEventListener('similarityPairsUpdate', (event) => {
     try {
-        const similarityPairs = JSON.parse(event.data);
-        updateGraphForSelectedFeeds( similarityPairs);
+        if (event.data) {
+            const base64Data = event.data;
+            const binaryString = atob(base64Data);
+            const data = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                data[i] = binaryString.charCodeAt(i);
+            }
+            if (data.length > 0) {
+                const decompressedData = inflateSync(data);
+                const similarityPairs = uint8ArrayToMap(decompressedData);
+                updateGraphForSelectedFeeds(similarityPairs);
+            }
+        }
     } catch (error) {
         logger.error('Error parsing similarity Pairs data:', error);
     }
 });
-
 
 /**
  * @param {EventSource} eventSource

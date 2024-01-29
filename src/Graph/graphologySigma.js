@@ -320,7 +320,7 @@ class SigmaGraphManager {
                     attributes.edgeStrength = 0.1; // Custom attribute for edge strength
                     this.graph.addNode(node.id, attributes);
 
-                    // Animate edge strength from weak to full over 3 seconds
+                    // Animate edge strength from weak to full over 1 seconds
                     const animateEdgeStrength = (startTime, nodeId) => {
                         const currentTime = Date.now();
                         const elapsedTime = currentTime - startTime;

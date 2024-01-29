@@ -41,5 +41,5 @@ export const graphLogger        = new Logger(false);
 export const visualGraphLogger  = new Logger(false); 
 export const forceAtlasLogger   = new Logger(false); 
 export const quadTreeLogger     = new Logger(false); 
-export const articlesLogger     = new Logger(true); 
+export const articlesLogger     = new Logger(false); 
 

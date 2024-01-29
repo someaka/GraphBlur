@@ -1,21 +1,24 @@
 import { serverLogger as logger } from '../logger.js';
 import { createSimilarityPairs } from '../Simil/simil.js';
+import { deflateSync } from 'fflate';
+// import { TextEncoder } from 'text-encoder-lite';
 
-
-/**
- * @param {any[]} clients
- * @param {{}} similarityPairs
- */
-function sendSimilarityPairsUpdate(clients, similarityPairs) {
-  clients.forEach((/** @type {{ write: (arg0: string) => void; }} */ clientRes) => {
-    clientRes.write(`event: similarityPairsUpdate\ndata: ${JSON.stringify(similarityPairs)}\n\n`);
-  });
+function mapToUint8Array(map) {
+ const jsonStr = JSON.stringify([...map]);
+ const encoder = new TextEncoder();
+ return encoder.encode(jsonStr);
 }
 
-/**
- * @param {any[]} clients
- * @param {Array<{article: {title: string, text: string}}>} articlesWithContent
- */
+function sendSimilarityPairsUpdate(clients, similarityPairs) {
+  clients.forEach((clientRes) => {
+      const data = mapToUint8Array(similarityPairs);
+      const encoded = deflateSync(data);
+      const base64Data = btoa(String.fromCharCode.apply(null, encoded));
+      clientRes.write(`event: similarityPairsUpdate\ndata: ${base64Data}\n\n`);
+  });
+ }
+
+ 
 async function calculateAndSendSimilarityPairs(clients, articlesWithContent) {
   try {
     const filteredArticles = articlesWithContent

@@ -151,8 +151,6 @@ class Similarity {
 
                 this.queuedArticles = []; // Clear the queue
                 this.lastEmbeddingsCallTime = currentTime;
-                // Clear the task queue if necessary, or process next items
-                this.taskQueue.clear();
             }
         }
     }

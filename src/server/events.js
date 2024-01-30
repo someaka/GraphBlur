@@ -11,10 +11,14 @@ function mapToUint8Array(map) {
 
 function sendSimilarityPairsUpdate(clients, similarityPairs) {
   clients.forEach((clientRes) => {
-      const data = mapToUint8Array(similarityPairs);
-      const encoded = deflateSync(data);
-      const base64Data = btoa(String.fromCharCode.apply(null, encoded));
-      clientRes.write(`event: similarityPairsUpdate\ndata: ${base64Data}\n\n`);
+     const data = mapToUint8Array(similarityPairs);
+     const encoded = deflateSync(data);
+     let base64Data = '';
+     for (let i = 0; i < encoded.length; i++) {
+       base64Data += String.fromCharCode(encoded[i]);
+     }
+     base64Data = btoa(base64Data);
+     clientRes.write(`event: similarityPairsUpdate\ndata: ${base64Data}\n\n`);
   });
  }
 

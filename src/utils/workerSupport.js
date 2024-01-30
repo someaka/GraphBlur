@@ -52,6 +52,10 @@ class WorkerPool extends EventEmitter {
         }
     }
 
+    getAvailableWorkers() {
+        return this.workers.filter(info => !info.busy);
+    }
+
     terminateAll() {
         this.workers.forEach(info => info.worker.terminate());
     }

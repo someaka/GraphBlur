@@ -1,4 +1,4 @@
-import chroma from "chroma-js";
+import chroma from 'chroma-js';
 
 /**
  * @param {ArrayLike<any> | { [s: string]: any; }} feeds
@@ -31,11 +31,45 @@ export function generateColors(feeds) {
         // Create a pastel color with the calculated hue
         const saturation = 60; // Saturation for pastel colors
         const lightness = 85; // Lightness for pastel colors
-        const color = chroma.hsl(hue % 360, saturation / 100, lightness / 100).css();
+        const color = `hsl(${hue % 360}, ${saturation}%, ${lightness}%)`;
 
         // Add the color to the feed object
         feed.color = color;
     }
 
     return feeds;
+}
+
+
+export function getColorFromString(color) {
+    // Extract the hue, saturation, and lightness components from the color string
+    const hslMatch = color.match(/hsl\(([^,]+),\s*([^,]+)%,\s*([^,]+)%\)/);
+    if (!hslMatch) {
+        console.error('Invalid HSL color string:', color);
+        return '#000'; // Fallback to black if the color string is invalid
+    }
+
+    // Normalize the hue to be between 0 and 360
+    const rawHue = parseFloat(hslMatch[1]);
+    const hue = rawHue % 360;
+    const saturation = parseFloat(hslMatch[2]);
+    const lightness = parseFloat(hslMatch[3]);
+
+    // logger.log("Hue:", hue, "Saturation:", saturation, "Lightness:", lightness);
+
+    // Use Chroma.js to construct a valid HSL color
+    const hslColor = chroma.hsl(hue, saturation / 100, lightness / 100).css();
+    return hslColor;
+}
+
+export function getStringFromColor(color) {
+    // Convert the Chroma.js color object to HSL and destructure it into components
+    const [hue, saturation, lightness] = chroma(color).hsl();
+
+    // Normalize the hue to be between 0 and 360
+    const normalizedHue = hue % 360;
+
+    // Construct a valid HSL color string
+    const hslColorString = `hsl(${normalizedHue}, ${saturation * 100}%, ${lightness * 100}%)`;
+    return hslColorString;
 }

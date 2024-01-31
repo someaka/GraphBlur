@@ -2,7 +2,6 @@ import { graphLogger as logger } from '../logger.js';
 
 import Graph from "graphology";
 import Sigma from "sigma";
-import chroma from "chroma-js";
 import { v4 as uuid } from "uuid";
 import ForceSupervisor from "graphology-layout-force/worker";
 import { pointArticleFromNode } from "../Feeds/ui/FeedUI";
@@ -174,39 +173,7 @@ class SigmaGraphManager {
     //     tooltip.style.visibility = 'hidden';
     // }
 
-    // Assuming the color is a string like "hsl(11884488.235294117, 60%, 85%)", convert it to a valid HSL string using Chroma.js
-    getColorFromString(color) {
-        // Extract the hue, saturation, and lightness components from the color string
-        const hslMatch = color.match(/hsl\(([^,]+),\s*([^,]+)%,\s*([^,]+)%\)/);
-        if (!hslMatch) {
-            console.error('Invalid HSL color string:', color);
-            return '#000'; // Fallback to black if the color string is invalid
-        }
 
-        // Normalize the hue to be between 0 and 360
-        const rawHue = parseFloat(hslMatch[1]);
-        const hue = rawHue % 360;
-        const saturation = parseFloat(hslMatch[2]);
-        const lightness = parseFloat(hslMatch[3]);
-
-        // logger.log("Hue:", hue, "Saturation:", saturation, "Lightness:", lightness);
-
-        // Use Chroma.js to construct a valid HSL color
-        const hslColor = chroma.hsl(hue, saturation / 100, lightness / 100).css();
-        return hslColor;
-    }
-
-    getStringFromColor(color) {
-        // Convert the Chroma.js color object to HSL and destructure it into components
-        const [hue, saturation, lightness] = chroma(color).hsl();
-
-        // Normalize the hue to be between 0 and 360
-        const normalizedHue = hue % 360;
-
-        // Construct a valid HSL color string
-        const hslColorString = `hsl(${normalizedHue}, ${saturation * 100}%, ${lightness * 100}%)`;
-        return hslColorString;
-    }
 
     // Update the getNodeAttributes method to use the new color conversion
     getNodeAttributes(node) {

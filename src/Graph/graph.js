@@ -2,6 +2,8 @@ import { graphLogger as logger } from '../logger.js';
 import { articlesCache } from "../Feeds/data/FeedCache.js";
 import { visualizeGraph, clearGraph } from "./graphologySigma.js";
 import { createPairKey, reversePairKey } from '../utils/graphHelpers.js';
+import { getColorFromString } from '../utils/colorUtils.js';
+
 import chroma from "chroma-js";
 
 const DEFAULT_WIDTH = 800;
@@ -52,7 +54,7 @@ class Graph {
         return articles.map((/** @type {{ id: any; title: any; feedColor: any; }} */ article) => ({
             id: article.id,
             title: article.title,
-            color: article.feedColor,
+            color: getColorFromString(article.feedColor),
             x: center.x + distance * Math.cos(angle),
             y: center.y + distance * Math.sin(angle),
             vx: 0,

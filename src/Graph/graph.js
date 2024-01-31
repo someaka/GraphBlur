@@ -2,6 +2,7 @@ import { graphLogger as logger } from '../logger.js';
 import { articlesCache } from "../Feeds/data/FeedCache.js";
 import { visualizeGraph, clearGraph } from "./graphologySigma.js";
 import { createPairKey, reversePairKey } from '../utils/graphHelpers.js';
+import chroma from "chroma-js";
 
 const DEFAULT_WIDTH = 800;
 const DEFAULT_HEIGHT = 600;
@@ -34,19 +35,30 @@ class Graph {
 
 
 
-    articlesToNodes(articles, dimensions = this.dimensions) {
-        const { width, height } = this.validateDimensions(dimensions);
+    articlesToNodes(articles) {
+        const center = { x: 0, y: 0 }; // Adjust this if your graph's center is different
+        const radius = 1; // Small radius around the center for initial node placement
+
+
+        // COOLEST LOOKING BUG EVER
+        // just to be clear the random should be done inside the map
+        // but this makes it look awesome
+
+        
+        // Randomize position around the center within the defined radius
+        const angle = Math.random() * Math.PI * 2;
+        const distance = Math.random() * radius;
+
         return articles.map((/** @type {{ id: any; title: any; feedColor: any; }} */ article) => ({
             id: article.id,
             title: article.title,
             color: article.feedColor,
-            x: width / 2 + (Math.random() - 0.5) * 10,
-            y: height / 2 + (Math.random() - 0.5) * 10,
+            x: center.x + distance * Math.cos(angle),
+            y: center.y + distance * Math.sin(angle),
             vx: 0,
             vy: 0,
             degree: 0,
-            mass: 0,
-            selected: false
+            mass: 0
         }));
     }
 
@@ -58,7 +70,7 @@ class Graph {
                     source: nodes[i],
                     target: nodes[j],
                     weight: this.getSimilarity(nodes[i].id, nodes[j].id),
-                    selected: false
+                    color: chroma.mix(nodes[i].color, nodes[j].color, 0.5, 'rgb').brighten(0.77).hex()
                 });
             }
         }
@@ -68,7 +80,7 @@ class Graph {
     getSimilarity(id1, id2) {
         const pairKey = createPairKey(id1, id2);
         const reveKey = reversePairKey(pairKey);
-        const res = this.similarityPairs.get(pairKey) || this.similarityPairs.get(reveKey) || 0;
+        const res = this.similarityPairs.get(pairKey) || this.similarityPairs.get(reveKey) || -2;
         return res;
     }
 
@@ -87,9 +99,10 @@ class Graph {
         // Calculate the threshold weight based on the percentile
         const weights = edges.map((/** @type {{ weight: any; }} */ edge) => this.normalizeEdgeWeight(edge.weight));
         const sortedWeights = Array.from(weights).sort((/** @type {number} */ a, /** @type {number} */ b) => a - b);
-        const index = Math.floor(percentile * sortedWeights.length);
-        const threshold = sortedWeights[index];
-    
+        const postitiveWeights = sortedWeights.filter((/** @type {number} */ weight) => weight >= 0);
+        const index = Math.floor(percentile * postitiveWeights.length);
+        const threshold = postitiveWeights[index];
+
         return edges.filter((/** @type {{ weight: number; }} */ edge) => this.normalizeEdgeWeight(edge.weight) >= threshold);
 
     }

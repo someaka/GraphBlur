@@ -1,3 +1,5 @@
+import chroma from "chroma-js";
+
 /**
  * @param {ArrayLike<any> | { [s: string]: any; }} feeds
  */
@@ -23,13 +25,13 @@ export function generateColors(feeds) {
         const isBlue = Number(feedIndex) % 2 === 0;
         const colorIndex = Math.floor(Number(feedIndex) / 2);
         const hue = isBlue
-            ? hueBlueStart + (colorIndex * stepSizeBlue) % 360
-            : hueGreenStart + (colorIndex * stepSizeGreen) % 360;
+            ? hueBlueStart + (colorIndex * stepSizeBlue)
+            : hueGreenStart + (colorIndex * stepSizeGreen);
 
         // Create a pastel color with the calculated hue
         const saturation = 60; // Saturation for pastel colors
         const lightness = 85; // Lightness for pastel colors
-        const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+        const color = chroma.hsl(hue % 360, saturation / 100, lightness / 100).css();
 
         // Add the color to the feed object
         feed.color = color;

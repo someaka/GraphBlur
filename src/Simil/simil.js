@@ -285,8 +285,8 @@ class Similarity {
         articles.forEach((otherArticle) => {
             if (otherArticle !== article) {
                 this.embeddingsCache[article.id] = new Array(384).fill(0);
-                this.similarityPairs.set(`${article.id}_${otherArticle.id}`, 0);
-                this.similarityPairs.set(`${otherArticle.id}_${article.id}`, 0);
+                this.similarityPairs.set(`${article.id}_${otherArticle.id}`, -2);
+                this.similarityPairs.set(`${otherArticle.id}_${article.id}`, -2);
                 this.pairsSet.add(`${article.id}_${otherArticle.id}`);
                 this.pairsSet.add(`${otherArticle.id}_${article.id}`);
             }

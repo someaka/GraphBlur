@@ -8,7 +8,7 @@ import ForceSupervisor from "graphology-layout-force/worker";
 import { pointArticleFromNode } from "../Feeds/ui/FeedUI";
 // import ForceSupervisor from 'graphology-layout-forceatlas2/worker';
 
-
+const CHUNK_SIZE = 1000;
 
 
 class SigmaGraphManager {
@@ -262,7 +262,14 @@ class SigmaGraphManager {
 
 
 
-    updateGraph(newGraphData) {
+
+
+
+
+
+
+
+    async updateGraph(newGraphData) {
         // Create sets for quick lookup
         const existingNodesSet = new Set(this.graph.nodes());
         const existingEdgesSet = new Set(this.graph.edges());
@@ -271,40 +278,77 @@ class SigmaGraphManager {
         const radius = 0.05; // Small radius around the center for initial node placement
         const defaultNodeSize = 10; // Default size for new nodes
 
+        // Create sets for quick lookup
+        const newNodesSet = new Set(newGraphData.nodes.map(node => node.id));
+        //const newEdgesSet = new Set(newGraphData.links.map(link => `${link.source.id}_${link.target.id}`));
 
         try {
-            // Remove edges that are no longer present
-            existingEdgesSet.forEach(edge => {
+            //this.layout.stop();
+            // await this.removeEdges(existingEdgesSet, newEdgesSet);
+            this.graph.clearEdges();
+            await this.removeNodes(existingNodesSet, existingEdgesSet, newNodesSet);
+            //this.layout.start();
+
+            await this.addNewNodes(newGraphData.nodes, existingNodesSet, center, radius, defaultNodeSize);
+            await this.addNewEdges(newGraphData.links, new Set());
+
+            // Refresh the Sigma renderer to reflect the changes
+            this.renderer.refresh();
+        } catch {
+            logger.warn("Failed to update graph")
+        }
+    }
+
+    async removeEdges(existingEdgesSet, newEdgesSet) {
+
+        const edgesArray = Array.from(existingEdgesSet);
+        const chunkSize = CHUNK_SIZE; // Adjust this value based on your needs
+
+        for (let i = 0; i < edgesArray.length; i += chunkSize) {
+            const chunk = edgesArray.slice(i, i + chunkSize);
+            for (let edge of chunk) {
                 if (this.graph.hasEdge(edge)) { // Check if the edge still exists
                     const [sourceId, targetId] = this.graph.extremities(edge);
-                    if (!newGraphData.links.some(link => {
-                        const linkSourceId = typeof link.source === 'object' ? link.source.id : link.source;
-                        const linkTargetId = typeof link.target === 'object' ? link.target.id : link.target;
-                        return (sourceId === linkSourceId && targetId === linkTargetId) || (sourceId === linkTargetId && targetId === linkSourceId);
-                    })) {
-                        this.graph.dropEdge(edge);
-                    }
-                }
-            });
-
-            // Remove nodes that are no longer present
-            existingNodesSet.forEach(nodeId => {
-                if (!newGraphData.nodes.some(node => node.id === nodeId)) {
-                    // Before removing the node, remove all connected edges
-                    this.graph.forEachEdge(nodeId, edge => {
+                    const key = `${sourceId}_${targetId}`;
+                    if (!newEdgesSet.has(key)) {
                         this.graph.dropEdge(edge);
                         existingEdgesSet.delete(edge); // Update the existing edges set
-                    });
-                    // Now it's safe to remove the node
+                    }
+                }
+            }
+            //await new Promise(resolve => setTimeout(resolve, 0));
+        }
+    }
+
+    async removeNodes(existingNodesSet, existingEdgesSet, newNodesSet) {
+        const nodesArray = Array.from(existingNodesSet);
+        const chunkSize = 1000; // Adjust this value based on your needs
+
+
+        for (let i = 0; i < nodesArray.length; i += chunkSize) {
+            const chunk = nodesArray.slice(i, i + chunkSize);
+            for (let nodeId of chunk) {
+                if (!newNodesSet.has(nodeId)) {
+                    // // Before removing the node, remove all connected edges
+                    // this.graph.forEachEdge(nodeId, edge => {
+                    //     this.graph.dropEdge(edge);
+                    //     existingEdgesSet.delete(edge); // Update the existing edges set
+                    // });
+                    // // Now it's safe to remove the node
                     this.graph.dropNode(nodeId);
                 }
-            });
+            }
+            //await new Promise(resolve => setTimeout(resolve, 0));
+        }
+    }
 
+    async addNewNodes(nodes, existingNodesSet, center, radius, defaultNodeSize) {
+        const nodesArray = Array.from(nodes);
+        const chunkSize = 5; // Adjust this value based on your needs
 
-
-
-            // Add new nodes around the center with weak edges
-            newGraphData.nodes.forEach(node => {
+        for (let i = 0; i < nodesArray.length; i += chunkSize) {
+            const chunk = nodesArray.slice(i, i + chunkSize);
+            for (let node of chunk) {
                 if (!existingNodesSet.has(node.id)) {
                     // Randomize position around the center within the defined radius
                     const angle = Math.random() * Math.PI * 2;
@@ -320,37 +364,22 @@ class SigmaGraphManager {
                     attributes.edgeStrength = 0.1; // Custom attribute for edge strength
                     this.graph.addNode(node.id, attributes);
 
-                    // Animate edge strength from weak to full over 1 seconds
-                    const animateEdgeStrength = (startTime, nodeId) => {
-                        const currentTime = Date.now();
-                        const elapsedTime = currentTime - startTime;
-                        const duration = 1000; // 1 second
-
-                        if (elapsedTime < duration) {
-                            const progress = elapsedTime / duration;
-                            const edgeStrength = 0.1 + (progress * (1 - 0.1)); // Animate from 0.1 to 1
-
-                            // Update edge strength for all edges connected to the new node
-                            this.graph.forEachEdge(nodeId, (edge) => {
-                                this.graph.setEdgeAttribute(edge, 'edgeStrength', edgeStrength);
-                            });
-
-                            requestAnimationFrame(() => animateEdgeStrength(startTime, nodeId));
-                        }
-                    };
-
-                    // Start the edge strength animation
-                    const startTime = Date.now();
-                    requestAnimationFrame(() => animateEdgeStrength(startTime, node.id));
+                    this.animateEdgeStrength(node.id);
                 }
-            });
+            }
+            //await new Promise(resolve => setTimeout(resolve, 0));
+        }
+    }
 
+    async addNewEdges(links, existingEdgesSet) {
+        const linksArray = Array.from(links);
+        const chunkSize = CHUNK_SIZE; // Adjust this value based on your needs
 
-
-            // Add new edges
-            newGraphData.links.forEach(link => {
-                const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-                const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+        for (let i = 0; i < linksArray.length; i += chunkSize) {
+            const chunk = linksArray.slice(i, i + chunkSize);
+            for (let link of chunk) {
+                const sourceId = link.source.id;
+                const targetId = link.target.id;
                 const edgeKey = `${sourceId}_${targetId}`;
                 const edgeKeyRev = `${targetId}_${sourceId}`;
 
@@ -365,20 +394,48 @@ class SigmaGraphManager {
                         color: averageColor,
                     });
                 }
-            });
-
-
-
-
-
-            // Refresh the Sigma renderer to reflect the changes
-            this.renderer.refresh();
-        } catch {
-            logger.warn("Failed to update graph")
+            }
+            //await new Promise(resolve => setTimeout(resolve, 0));
         }
-
-        
     }
+
+    animateEdgeStrength(nodeId) {
+        // Animate edge strength from weak to full over 1 seconds
+        const animateEdgeStrength = (startTime, nodeId) => {
+            const currentTime = Date.now();
+            const elapsedTime = currentTime - startTime;
+            const duration = 1000; // 1 second
+
+            if (elapsedTime < duration) {
+                const progress = elapsedTime / duration;
+                const edgeStrength = 0.1 + (progress * (1 - 0.1)); // Animate from 0.1 to 1
+
+                // Update edge strength for all edges connected to the new node
+                this.graph.forEachEdge(nodeId, (edge) => {
+                    this.graph.setEdgeAttribute(edge, 'edgeStrength', edgeStrength);
+                });
+
+                requestAnimationFrame(() => animateEdgeStrength(startTime, nodeId));
+            }
+        };
+
+        // Start the edge strength animation
+        const startTime = Date.now();
+        requestAnimationFrame(() => animateEdgeStrength(startTime, nodeId));
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     clearGraph() {
         // Clear the graph and refresh the renderer

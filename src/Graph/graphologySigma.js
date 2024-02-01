@@ -43,6 +43,7 @@ class SigmaGrapUpdate {
             //     border: NodeProgramBorder,
             // },
         });
+        this.defaultDrawHover = this.renderer.getSetting("defaultDrawNodeHover");
         this.draggedNode = null;
         this.isDragging = false;
         // TODO set up forceatlas2 and different settings for each layout
@@ -484,6 +485,9 @@ class SigmaGrapUpdate {
                 //attribute: 'color'
                 color: '#000000'
             });
+            this.renderer.setSetting("defaultDrawNodeHover",
+                this.defaultDrawHover
+            );
             this.graph.forEachEdge((edge) => {
                 this.graph.updateEdgeAttributes(edge, attr => {
                     attr.color = attr.day_color
@@ -498,8 +502,8 @@ class SigmaGrapUpdate {
                 color: '#FFFFFF'
             });
             this.renderer.setSetting("defaultDrawNodeHover",
-            // function that does nothing
-            () => {}
+                // function that does nothing
+                () => { }
             );
             this.graph.forEachEdge((edge) => {
                 this.graph.updateEdgeAttributes(edge, attr => {

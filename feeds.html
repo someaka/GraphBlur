@@ -77,14 +77,14 @@
 
                 <!-- Gravity Slider -->
                 <div class="slider-container">
-                    <label for="gravitySlider">Gravity:</label>
+                    <label for="gravitySlider" class="slider-title">Gravity:</label>
                     <small class="slider-explanation">Higher gravity pulls nodes closer to center, lower lets them drift
                         apart.</small>
                     <div class="range-slider">
                         <input type="range" id="gravitySlider" min="0" max="100" value="1" class="slider"
                             data-output="gravityOutput" data-scale-min="0.00001" data-scale-max="10"
                             data-scale-factor="1" data-precision="5" data-scale-type="log">
-                        <output id="gravityOutput">0.0001</output>
+                        <output id="gravityOutput" class="slider-output">0.0001</output>
                         <div class="slider-min-max">
                             <span class="slider-min">0.00001</span>
                             <span class="slider-max">10</span>
@@ -94,14 +94,14 @@
 
                 <!-- Repulsion Slider -->
                 <div class="slider-container">
-                    <label for="repulsionSlider">Repulsion:</label>
+                    <label for="repulsionSlider" class="slider-title">Repulsion:</label>
                     <small class="slider-explanation">Higher repulsion spreads nodes further apart, lower brings them
                         closer.</small>
                     <div class="range-slider">
                         <input type="range" id="repulsionSlider" min="0" max="100" value="70" class="slider"
                             data-output="repulsionOutput" data-scale-min="0.0001" data-scale-max="10"
                             data-scale-factor="1" data-precision="5" data-scale-type="log">
-                        <output id="repulsionOutput">0.2</output>
+                        <output id="repulsionOutput" class="slider-output">0.2</output>
                         <div class="slider-min-max">
                             <span class="slider-min">0.0001</span>
                             <span class="slider-max">10</span>
@@ -111,14 +111,14 @@
 
                 <!-- Attraction Slider -->
                 <div class="slider-container">
-                    <label for="attractionSlider">Attraction:</label>
+                    <label for="attractionSlider" class="slider-title">Attraction:</label>
                     <small class="slider-explanation">Higher attraction increases the force pulling connected nodes
                         together.</small>
                     <div class="range-slider">
                         <input type="range" id="attractionSlider" min="0" max="10000" value="10" class="slider"
                             data-output="attractionOutput" data-scale-min="0.000001" data-scale-max="0.01"
                             data-scale-factor="0.0001" data-precision="8" data-scale-type="log">
-                        <output id="attractionOutput">0.00001</output>
+                        <output id="attractionOutput" class="slider-output">0.00001</output>
                         <div class="slider-min-max">
                             <span class="slider-min">0.000001</span>
                             <span class="slider-max">0.01</span>
@@ -128,14 +128,14 @@
 
                 <!-- Inertia Slider -->
                 <div class="slider-container">
-                    <label for="inertiaSlider">Inertia:</label>
+                    <label for="inertiaSlider" class="slider-title">Inertia:</label>
                     <small class="slider-explanation">Higher inertia maintains node velocity, lower inertia slows nodes
                         down faster.</small>
                     <div class="range-slider">
                         <input type="range" id="inertiaSlider" min="0" max="100" value="60" class="slider"
                             data-output="inertiaOutput" data-scale-min="0" data-scale-max="5" data-scale-factor="1"
                             data-precision="1" data-scale-type="linear" step="0.1">
-                        <output id="inertiaOutput">0.6</output>
+                        <output id="inertiaOutput" class="slider-output">0.6</output>
                         <div class="slider-min-max">
                             <span class="slider-min">0</span>
                             <span class="slider-max">5</span>
@@ -145,14 +145,14 @@
 
                 <!-- Max Move Slider -->
                 <div class="slider-container">
-                    <label for="maxMoveSlider">Max Move:</label>
+                    <label for="maxMoveSlider" class="slider-title">Max Move:</label>
                     <small class="slider-explanation">Higher max move allows nodes to move further in each
                         iteration.</small>
                     <div class="range-slider">
                         <input type="range" id="maxMoveSlider" min="0" max="100" value="1" class="slider"
                             data-output="maxMoveOutput" data-scale-min="0" data-scale-max="10" data-scale-factor="1"
                             data-precision="0" data-scale-type="linear">
-                        <output id="maxMoveOutput">1</output>
+                        <output id="maxMoveOutput" class="slider-output">1</output>
                         <div class="slider-min-max">
                             <span class="slider-min">0</span>
                             <span class="slider-max">10</span>

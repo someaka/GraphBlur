@@ -40,8 +40,37 @@ body.night .sample {
    color: var(--active-palette-night);
 }
 
+
+/* Default color for slider titles */
+.slider-title {
+   color: var(--active-palette-night); /* Assuming this is the default color for day mode */
+}
+
+/* Color for slider titles in night mode */
+body.night .slider-title {
+   color: var(--active-palette-day); /* Assuming this is the color for night mode */
+}
+/* Default color for slider titles */
+.toggle-label {
+   color: var(--active-palette-night); /* Assuming this is the default color for day mode */
+}
+
+/* Color for slider titles in night mode */
+body.night .toggle-label {
+   color: var(--active-palette-day); /* Assuming this is the color for night mode */
+}
+
+body .slider-output {
+   color:  var(--active-palette-night); 
+}
+
+body.night .slider-output {
+   color:  var(--active-palette-day); 
+}
+
+
 /*TOOGLE*/
-input {
+input[id="change"] {
    display: none;
 }
 

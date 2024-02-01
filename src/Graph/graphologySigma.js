@@ -34,10 +34,8 @@ class SigmaGrapUpdate {
 
         this.graph = new Graph();
         this.renderer = new Sigma(this.graph, this.container, {
-            // ts says that setting does not exist
-            // labelThreshold: 0, // seemingly higher means less clutter, 
-            // enableHovering: false, // Disable built-in hover behavior
-            //
+
+
             renderLabels: true, // Disable automatic label rendering   
             allowInvalidContainer: true, //shusshes cypress
             labelRenderedSizeThreshold: 5,
@@ -499,6 +497,10 @@ class SigmaGrapUpdate {
                 //attribute: 'color'
                 color: '#FFFFFF'
             });
+            this.renderer.setSetting("defaultDrawNodeHover",
+            // function that does nothing
+            () => {}
+            );
             this.graph.forEachEdge((edge) => {
                 this.graph.updateEdgeAttributes(edge, attr => {
                     attr.color = attr.night_color

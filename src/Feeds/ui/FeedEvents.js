@@ -15,6 +15,9 @@ import {
 
 
 class FeedEvents {
+    /**
+     * @type {FeedEvents | null}
+     */
     static instance = null;
     selectAllButton = document.querySelector('#selectAllButton');
 
@@ -28,7 +31,7 @@ class FeedEvents {
 
 
     async selectAllFeedsActions(allFeeds, feedsData) {
-        let promises = [];
+
         for (const feedElement of allFeeds) {
             const feedId = feedElement.id;
             const feedData = feedsData[feedId];
@@ -36,9 +39,9 @@ class FeedEvents {
                 logger.error(`Feed data for ID ${feedId} is missing unreadStories or is not an array.`);
                 continue;
             }
-            promises.push(displayArticles(feedData));
+            await displayArticles(feedData);
         }
-        await Promise.all(promises);
+
         updateGraphForSelectedFeeds();
     }
 
@@ -49,6 +52,10 @@ class FeedEvents {
 
     async toggleAllFeeds(feedsData) {
         const allFeeds = document.querySelectorAll('#feedslist div');
+        if(!this.selectAllButton){
+            return;
+        }
+
         const isSelecting = this.selectAllButton.textContent === 'Select All';
 
         allFeeds.forEach(feed => updateFeedElementStyles(feed, isSelecting));

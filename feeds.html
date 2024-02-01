@@ -10,10 +10,13 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
     <link rel="stylesheet" href="feeds_styles.css">
+    <link rel="stylesheet" href="daynight.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
 </head>
 
-<body>
+<body class="day sa" id="bd">
     <div id="container">
         <div id="loading" class="spinner"></div>
         <div id="feedsContainer" class="panel">
@@ -24,9 +27,39 @@
             <div id="graph-container"></div>
         </div>
         <div id="maincontent" class="panel_overlay">
-            <div style="text-align: right;">
-                <button id="forcesButton" class="btn btn-primary">Forces</button>
-                <button id="toggleButton" class="btn btn-primary">Toggle Articles</button>
+
+
+
+
+
+            <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: -5px;">
+
+
+
+                <div id="daynighttoggle" style="margin-right: 10px;  margin-top: 10px">
+                    <input id="change" type="checkbox" onchange="toggleDayNightMode()">
+                    <label for="change" class="tg">
+
+                        <span class="sm">
+                            <i class="fas fa-cloud cloud1"></i>
+                        </span>
+
+                    </label>
+                </div>
+
+
+
+
+
+
+
+
+
+
+
+                <!-- <div style="text-align: right;"> -->
+                <button id="forcesButton" class="btn btn-primary" style="margin-right: 10px;">Forces</button>
+                <button id="toggleButton" class="btn btn-primary" style="margin-right: 10px;">Toggle Articles</button>
             </div>
             <div id="articles"></div>
             <div id="forceSettings" style="display: none;">
@@ -139,7 +172,8 @@
         </template>
         <!-- Add tooltip element to feeds.html -->
         <div id="tooltip" style="position: absolute; visibility: hidden; pointer-events: none; z-index: 1000;"></div>
-        <script src="https://d3js.org/d3.v6.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
         <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
         <script type="module" src="/src/Feeds/feeds.js"></script>
         <script type="module" src="/src/forceSetting.js"></script>

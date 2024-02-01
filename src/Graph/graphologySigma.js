@@ -10,8 +10,23 @@ import { pointArticleFromNode } from "../Feeds/ui/FeedUI";
 //const CHUNK_SIZE = 1000;
 
 
-class SigmaGraphManager {
-    constructor(containerId) {
+class SigmaGrapUpdate {
+    /**
+     * @type {SigmaGrapUpdate | null}
+     */
+    static instance = null;
+
+    static getInstance() {
+        if (!this.instance) {
+            this.instance = new SigmaGrapUpdate();
+        }
+        return this.instance;
+    }
+
+
+
+    constructor() {
+        const containerId = 'graph-container';
         this.container = document.getElementById(containerId);
         if (!this.container) {
             throw new Error(`Container with id "${containerId}" not found.`);
@@ -25,6 +40,7 @@ class SigmaGraphManager {
             //
             renderLabels: true, // Disable automatic label rendering   
             allowInvalidContainer: true, //shusshes cypress
+            labelRenderedSizeThreshold: 5,
             // nodeProgramClasses: {
             //     border: NodeProgramBorder,
             // },
@@ -43,6 +59,7 @@ class SigmaGraphManager {
             }
         };
         this.layout = new ForceSupervisor(this.graph, this.settings);
+        this.DayOrNight = 1;
 
         this.startLayout();
         this.initializeInteractions();
@@ -359,7 +376,10 @@ class SigmaGraphManager {
             const edgeKey = `${sourceId}_${targetId}`;
             this.graph.addEdgeWithKey(edgeKey, sourceId, targetId, {
                 size: link.size || 1,
-                color: link.color
+                weight: link.weight || 1,
+                color: this.DayOrNight ? link.day_color : link.night_color,
+                day_color: link.day_color,
+                night_color: link.night_color
             });
         }
     }
@@ -459,27 +479,45 @@ class SigmaGraphManager {
         this.renderer.refresh();
         logger.log('New ForceSupervisor created with settings:', this.settings);
     }
-}
 
-let graphS;
+    updateDayNightMode() {
+        if (this.DayOrNight === 0) {
+            this.renderer.setSetting("labelColor", {
+                //attribute: 'color'
+                color: '#000000'
+            });
+            this.graph.forEachEdge((edge) => {
+                this.graph.updateEdgeAttributes(edge, attr => {
+                    attr.color = attr.day_color
+                    return attr;
+                });
+            })
 
-function visualizeGraph(newGraphData) {
-    if (!graphS) {
-        graphS = new SigmaGraphManager('graph-container');
+            this.DayOrNight = 1;
+        } else if (this.DayOrNight === 1) {
+            this.renderer.setSetting("labelColor", {
+                //attribute: 'color'
+                color: '#FFFFFF'
+            });
+            this.graph.forEachEdge((edge) => {
+                this.graph.updateEdgeAttributes(edge, attr => {
+                    attr.color = attr.night_color
+                    return attr;
+                });
+            })
+
+            this.DayOrNight = 0;
+        }
+        this.renderer.refresh();
     }
-    graphS.updateGraph(newGraphData);
 }
 
-function clearGraph() {
-    if (graphS) {
-        graphS.clearGraph();
-    }
-}
 
-function updateForceSettings(settings) {
-    if (graphS) {
-        graphS.updateForceSettings(settings);
-    }
-}
+const visualizeGraph = (newGraphData) => SigmaGrapUpdate.getInstance().updateGraph(newGraphData);
+const updateForceSettings = (newSettings) => SigmaGrapUpdate.getInstance().updateForceSettings(newSettings);
+const updateDayNightMode = () => SigmaGrapUpdate.getInstance().updateDayNightMode();
+const clearGraph = () => SigmaGrapUpdate.getInstance().clearGraph();
 
-export { visualizeGraph, clearGraph, updateForceSettings };
+
+
+export { visualizeGraph, clearGraph, updateForceSettings, updateDayNightMode };

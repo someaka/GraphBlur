@@ -1,0 +1,122 @@
+:root {
+   --palette-1-day: #E5E5E5;
+   /* Whisper */
+   --palette-1-night: #001529;
+   /* Deep Space */
+
+   --palette-2-day: #F5F5F5;
+   /* Light Gray */
+   --palette-2-night: #1A1A1A;
+   /* Dark Gray */
+
+   --palette-3-day: #ffffff;
+   /* White */
+   --palette-3-night: #00060c;
+   /* Black */
+
+
+
+   /* Add more palettes as needed */
+
+   --active-palette-day: var(--palette-3-day);
+   --active-palette-night: var(--palette-3-night);
+}
+body {
+   transition: background-color 0.125s ease-in-out;
+}
+body.day {
+   background-color: var(--active-palette-day);
+}
+
+body.night {
+   background-color: var(--active-palette-night);
+}
+
+.sample {
+   color: var(--active-palette-day);
+}
+
+body.night .sample {
+   color: var(--active-palette-night);
+}
+
+/*TOOGLE*/
+input {
+   display: none;
+}
+
+.tg {
+   border-radius: 15px;
+   background-color: #8bb1fc;
+   width: 50px;
+   height: 25px;
+   /*position:relative;
+   left:30px;*/
+   transition: all 400ms ease;
+}
+
+.sm {
+   display: inline-block;
+   position: relative;
+   z-index: 1;
+   background-color: #fffeba;
+   width: 23px;
+   height: 23px;
+   border-radius: 50%;
+   top: 1px;
+   left: 1px;
+   transition: all 400ms;
+}
+
+.fa-cloud {
+   font-size: 0.65em;
+   color: white;
+   transition: all 400ms;
+}
+
+.cloud1 {
+   left: 2px;
+}
+
+.cloud2 {
+   left: 20px;
+   top: 50px;
+}
+
+#change:checked+.tg {
+   background-color: #301b8b;
+}
+
+#change:checked+.tg .sm {
+   background-color: #d1d1d1;
+
+   transform: translateX(24px);
+}
+
+#change:checked+.tg .sm .fa-cloud {
+   color: #ffffff
+}
+
+#change:checked+.tg .sm .cloud1 {
+
+   transform: translateX(10px);
+}
+
+#change:checked+.tg .sm .cloud2 {
+
+   transform: translateX(-52px);
+}
+
+/* FONTS */
+.righteous {
+   font-family: 'Righteous', cursive;
+
+}
+
+.amatic {
+   font-family: 'Amatic SC', cursive;
+}
+
+.shadows {
+   font-family: 'Shadows Into Light', cursive;
+}

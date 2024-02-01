@@ -19,17 +19,21 @@ function toggleFeedElement(feedElement, originalColor) {
 }
 
 function pointArticleFromNode(color, articleId) {
-    // Find the feed element with the matching color
-    const selectedFeedElements = document.querySelectorAll('#feedslist div.clicked');
-    const feedElements = Array.from(selectedFeedElements);
-    // @ts-ignore
-    const feedElement = feedElements.find(el => el.dataset.originalColor === color);
+    // Find the feed that contains the articleId
+    let feedId = {};
 
-    if (feedElement) {
-        // Create a fake feedData object with just an id
-        const feedData = { id: feedElement.id };
-        // Display the articles for the feed in the right panel
-        displayArticles(feedData).then(() => {
+    for (let feed in articlesCache) {
+        let articles = articlesCache[feed];
+        for (let article of articles) {
+            if (article.id === articleId) {
+                feedId.id = feed;
+            }
+        }
+    }
+
+    if (feedId.id) {
+
+        displayArticles(feedId).then(() => {
             // Scroll to the article after a slight delay to allow for DOM rendering
             setTimeout(() => {
                 // Use the article ID to find the article element
@@ -40,6 +44,7 @@ function pointArticleFromNode(color, articleId) {
                 }
             }, 100); // Adjust the delay as needed
         });
+
     } else {
         console.error('No feed element found for color:', color);
     }
@@ -109,7 +114,7 @@ export {
     displayArticles,
     displayArticlesFromCache,
     createAndDisplayArticle,
-    
+
     toggleFeedElement,
     toggleMainContent,
     pointArticleFromNode

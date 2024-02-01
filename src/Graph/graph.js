@@ -39,7 +39,7 @@ class Graph {
 
     articlesToNodes(articles) {
         const center = { x: 0, y: 0 }; // Adjust this if your graph's center is different
-        const radius = 1; // Small radius around the center for initial node placement
+        const radius = 0.11; // Small radius around the center for initial node placement
 
 
         // COOLEST LOOKING BUG EVER
@@ -55,6 +55,7 @@ class Graph {
             id: article.id,
             title: article.title,
             color: getColorFromString(article.feedColor),
+            // night_color: getColorFromString(article.feedColor), // no change for now
             x: center.x + distance * Math.cos(angle),
             y: center.y + distance * Math.sin(angle),
             vx: 0,
@@ -68,11 +69,16 @@ class Graph {
         const links = [];
         for (let i = 0; i < nodes.length; i++) {
             for (let j = i + 1; j < nodes.length; j++) {
+                const mix = chroma.mix(nodes[i].color, nodes[j].color, 0.5, 'rgb');
+                const day = mix.brighten(0.77).hex();
+                const night = mix.darken(0.77).hex();
                 links.push({
                     source: nodes[i],
                     target: nodes[j],
                     weight: this.getSimilarity(nodes[i].id, nodes[j].id),
-                    color: chroma.mix(nodes[i].color, nodes[j].color, 0.5, 'rgb').brighten(0.77).hex()
+                    color: day,
+                    day_color: day,
+                    night_color: night
                 });
             }
         }

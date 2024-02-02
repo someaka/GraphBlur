@@ -2,6 +2,9 @@ import { getEmbeddings } from './similarityInteraction.js';
 import { createWorkerPool } from '../utils/workerSupport.js';
 import { cpus } from 'os';
 import { reversePairKey } from '../utils/graphHelpers.js';
+import { isValidArticle } from '../utils/articlesCheck.js';
+
+
 
 // Define constants at the top of the file
 const EMBEDDINGS_CALL_INTERVAL = 5000;
@@ -13,6 +16,44 @@ class Similarity {
      */
     static instance = null;
 
+    /**
+     * @type {Map<string, number[]>}
+     */
+    similarityPairs;
+
+    /**
+     * @type {Set<string>}
+     */
+    pairsSet;
+
+    /**
+     * @type {number}
+     */
+    numCPUs;
+
+
+    workerPool;
+
+    /**
+     * @type {Array<{ id: string, article: { title: string; text: string; }; }>}
+     */
+    queuedArticles;
+
+    /**
+     * @type {number}
+     */
+    lastEmbeddingsCallTime;
+
+    /**
+     * @type {boolean}
+     */
+    isProcessing;
+
+    /**
+     * @type {Record<string, number[]>}
+     */
+    embeddingsCache;
+
 
     static getInstance() {
         if (!this.instance) {
@@ -22,7 +63,10 @@ class Similarity {
     }
 
     constructor() {
+        this.initialize();
+    }
 
+    initialize() {
         this.embeddingsCache = {};
         this.similarityPairs = new Map();
         this.pairsSet = new Set();
@@ -31,18 +75,23 @@ class Similarity {
         this.queuedArticles = [];
         this.lastEmbeddingsCallTime = 0;
         this.isProcessing = false;
+        this.checkArticle = this.checkArticle.bind(this);
 
     }
 
+
+
+
+
+
+
+
     async calculateSimilarityPairs(articles) {
 
-        const validArticles = this.validateArticles(articles);
-
-        // Fetch embeddings for valid articles
-        await this.fetchEmbedings(validArticles);
+        await this.fetchEmbedings(articles);
 
         // Calculate similarity scores for new pairs
-        await this.updateSimilarityPairs(validArticles);
+        await this.updateSimilarityPairs(articles);
 
         // Return the updated similarity pairs
         return this.similarityPairs;
@@ -50,36 +99,110 @@ class Similarity {
     }
 
 
-    * generateTasks(articles) {
-        for (let i = 0; i < articles.length; i++) {
-            for (let j = i + 1; j < articles.length; j++) {
-                const id1 = articles[i].id;
-                const id2 = articles[j].id;
-                // Skip if similarity score already calculated
-                if (this.pairsSet.has(`${id1}_${id2}`) ||
-                    this.pairsSet.has(`${id2}_${id1}`)
-                ) continue;
-                // Check if embeddings are cached for both ids
-                if (!this.embeddingsCache[id1]) {
-                    if (!this.embeddingsCache[id2]) {
-                        // both missing
-                        yield { id1, id2, updateEmbeddings: 2 };
-                    } else {
-                        // id1 missing
-                        yield { id1, id2, updateEmbeddings: 0 };
-                    }
-                } else {
-                    if (!this.embeddingsCache[id2]) {
-                        // id2 missing
-                        yield { id1, id2, updateEmbeddings: 1 };
-                    } else {
-                        yield { id1, id2 };
-                    }
-                }
 
-            }
+
+
+
+    // validateArticles(articles) {
+    //     let validArticles = [];
+    //     articles.forEach(article => {
+    //         if (!this.embeddingsCache[article.id]) {
+    //             const hasInvalidContent = !article.article || typeof article.article.title !== 'string' || typeof article.article.text !== 'string';
+    //             const isEmptyString = !`${article.article.title} ${article.article.text}`.trim();
+
+    //             if (!hasInvalidContent && !isEmptyString) {
+    //                 validArticles.push(article);
+    //             } else {
+    //                 //this.assignZeroSimilarity(article, articles);
+    //             }
+    //         }
+    //     });
+    //     return validArticles;
+    // }
+
+    // assignZeroSimilarity(article, articles) {
+    //     articles.forEach((otherArticle) => {
+    //         if (otherArticle !== article) {
+    //             this.embeddingsCache[article.id] = new Array(384).fill(0);
+    //             this.similarityPairs.set(`${article.id}_${otherArticle.id}`, -2);
+    //             //this.similarityPairs.set(`${otherArticle.id}_${article.id}`, -2);
+    //             this.pairsSet.add(`${article.id}_${otherArticle.id}`);
+    //             this.pairsSet.add(`${otherArticle.id}_${article.id}`);
+    //         }
+    //     });
+    // }
+
+
+
+
+
+
+    async fetchEmbedings(articles) {
+        // Check which articles we already have in cache
+        const articlesToFetch = this.validateArticles(articles);
+
+        if (articlesToFetch.length > 0) {
+            this.queuedArticles = this.queuedArticles.concat(articlesToFetch);
+            // Schedule a call to get embeddings
+            await this.waitForEmbeddings();
         }
+
     }
+
+    validateArticles(articles) {
+        return articles.filter(this.checkArticle);
+    }
+
+    checkArticle(article) {
+        return (this.embeddingsCache[article.id] === undefined) && isValidArticle(article)
+    }
+
+    async waitForEmbeddings() {
+        const currentTime = Date.now();
+
+        const elapsedTime = currentTime - this.lastEmbeddingsCallTime;
+        if (elapsedTime < EMBEDDINGS_CALL_INTERVAL) {
+            setTimeout(() => { }, EMBEDDINGS_CALL_INTERVAL - elapsedTime);
+        }
+
+        if (this.isProcessing) {
+            // wait for isProcessing to be false again
+            await new Promise(resolve => {
+                const checkIsProcessing = () => {
+                    if (!this.isProcessing) {
+                        resolve(undefined);
+                    } else {
+                        setTimeout(checkIsProcessing, 100);
+                    }
+                };
+                checkIsProcessing();
+            });
+        } else {
+            this.isProcessing = true;
+
+            // Remove duplicates in queuedArticles
+            this.queuedArticles = Array.from(new Set(this.queuedArticles));
+            const articlesWithIds = this.extractTextsFromArticles(this.queuedArticles);
+            const embeddingsResults = await getEmbeddings(articlesWithIds);
+            embeddingsResults.forEach(result => {
+                this.embeddingsCache[result.id] = result.embedding;
+            });
+
+            this.queuedArticles = [];
+            this.lastEmbeddingsCallTime = currentTime;
+
+            this.isProcessing = false;
+        }
+
+    }
+
+    extractTextsFromArticles(articles) {
+        return articles.map((/** @type {{ id: any; article: { title: any; text: any; }; }} */ article) =>
+            ({ id: article.id, text: `${article.article.title} ${article.article.text}`.replace(/<[^>]*>/g, '') }));
+    }
+
+
+
 
 
     async updateSimilarityPairs(articles) {
@@ -127,6 +250,36 @@ class Similarity {
 
     }
 
+    * generateTasks(articles) {
+        for (let i = 0; i < articles.length; i++) {
+            for (let j = i + 1; j < articles.length; j++) {
+                const id1 = articles[i].id;
+                const id2 = articles[j].id;
+                // Skip if similarity score already calculated
+                if (this.pairsSet.has(`${id1}_${id2}`) ||
+                    this.pairsSet.has(`${id2}_${id1}`)
+                ) continue;
+                // Check if embeddings are cached for both ids
+                if (!this.embeddingsCache[id1]) {
+                    if (!this.embeddingsCache[id2]) {
+                        // both missing
+                        yield { id1, id2, updateEmbeddings: 2 };
+                    } else {
+                        // id1 missing
+                        yield { id1, id2, updateEmbeddings: 0 };
+                    }
+                } else {
+                    if (!this.embeddingsCache[id2]) {
+                        // id2 missing
+                        yield { id1, id2, updateEmbeddings: 1 };
+                    } else {
+                        yield { id1, id2 };
+                    }
+                }
+
+            }
+        }
+    }
 
     async processCalculations(tasks) {
 
@@ -179,8 +332,6 @@ class Similarity {
     }
 
 
-
-
     async processTask(worker, task) {
 
         return new Promise((/** @type {(value?: any) => void} */resolve, reject) => {
@@ -193,7 +344,7 @@ class Similarity {
                     reject(new Error(message.error));
                 } else {
                     this.similarityPairs.set(pairKey, message.similarity);
-                    this.similarityPairs.set(reversedKey, message.similarity);
+                    //this.similarityPairs.set(reversedKey, message.similarity);
                     this.pairsSet.add(pairKey);
                     this.pairsSet.add(reversedKey);
                     resolve();
@@ -222,109 +373,17 @@ class Similarity {
 
     }
 
-
-
-
-
-
-    async fetchEmbedings(articles) {
-        // Check which articles we already have in cache
-        const articlesToFetch = articles.filter(article => !this.embeddingsCache[article.id]);
-
-        if (articlesToFetch.length > 0) {
-            this.queuedArticles = this.queuedArticles.concat(articlesToFetch);
-            // Schedule a call to get embeddings
-            await this.waitForEmbeddings();
-        }
-
+    resetSimilarity() {
+        this.initialize();
     }
-
-    async waitForEmbeddings() {
-        const currentTime = Date.now();
-
-        const elapsedTime = currentTime - this.lastEmbeddingsCallTime;
-        if (elapsedTime < EMBEDDINGS_CALL_INTERVAL) {
-            setTimeout(() => { }, EMBEDDINGS_CALL_INTERVAL - elapsedTime);
-        }
-
-        if (this.isProcessing) {
-            // wait for isProcessing to be false again
-            await new Promise(resolve => {
-                const checkIsProcessing = () => {
-                    if (!this.isProcessing) {
-                        resolve(undefined);
-                    } else {
-                        setTimeout(checkIsProcessing, 100);
-                    }
-                };
-                checkIsProcessing();
-            });
-        } else {
-            this.isProcessing = true;
-
-            // Remove duplicates in queuedArticles
-            this.queuedArticles = Array.from(new Set(this.queuedArticles));
-            const articlesWithIds = this.extractTextsFromArticles(this.queuedArticles);
-            const embeddingsResults = await getEmbeddings(articlesWithIds);
-            embeddingsResults.forEach(result => {
-                this.embeddingsCache[result.id] = result.embedding;
-            });
-
-            this.queuedArticles = [];
-            this.lastEmbeddingsCallTime = currentTime;
-
-            this.isProcessing = false;
-        }
-
-    }
-
-
-
-
-    assignZeroSimilarity(article, articles) {
-        articles.forEach((otherArticle) => {
-            if (otherArticle !== article) {
-                this.embeddingsCache[article.id] = new Array(384).fill(0);
-                this.similarityPairs.set(`${article.id}_${otherArticle.id}`, -2);
-                this.similarityPairs.set(`${otherArticle.id}_${article.id}`, -2);
-                this.pairsSet.add(`${article.id}_${otherArticle.id}`);
-                this.pairsSet.add(`${otherArticle.id}_${article.id}`);
-            }
-        });
-    }
-
-    /**
-     * @param {{ id: string, article: { title: string; text: string; }; }[]} articles
-     */
-    validateArticles(articles) {
-        let validArticles = [];
-        articles.forEach(article => {
-            const hasInvalidContent = !article.article || typeof article.article.title !== 'string' || typeof article.article.text !== 'string';
-            const isEmptyString = !`${article.article.title} ${article.article.text}`.trim();
-
-            if (!hasInvalidContent && !isEmptyString) {
-                validArticles.push(article);
-            } else {
-                this.assignZeroSimilarity(article, articles);
-            }
-        });
-        return validArticles;
-    }
-
-    extractTextsFromArticles(articles) {
-        return articles.map((/** @type {{ id: any; article: { title: any; text: any; }; }} */ article) => ({ id: article.id, text: `${article.article.title} ${article.article.text}`.replace(/<[^>]*>/g, '') }));
-    }
-
 
 }
 
 
 
-/**
- * @param {{ id: string; article: { title: string; text: string; }; }[]} articles
- */
 const createSimilarityPairs = (articles) =>
     Similarity.getInstance().calculateSimilarityPairs(articles);
 
+const resetSimilarity = () => Similarity.getInstance().resetSimilarity();
 
-export { createSimilarityPairs };
+export { createSimilarityPairs, resetSimilarity };

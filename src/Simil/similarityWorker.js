@@ -1,4 +1,4 @@
-import { similLogger as logger } from '../logger.js';
+import { similWorkerLogger as logger } from '../logger.js';
 import { calculateSimilarity } from './similarityCalculate.js';
 import { parentPort } from 'worker_threads';
 

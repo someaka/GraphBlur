@@ -35,11 +35,12 @@ class Logger {
 // Export an instance of Logger for each file with logging enabled or disabled
 export const serverLogger       = new Logger(true); 
 export const clientLogger       = new Logger(false); 
-export const feedsLogger        = new Logger(false); 
+export const feedsLogger        = new Logger(true); 
 export const similLogger        = new Logger(true);
+export const similWorkerLogger  = new Logger(false);
 export const graphLogger        = new Logger(false); 
 export const visualGraphLogger  = new Logger(false); 
 export const forceAtlasLogger   = new Logger(false); 
 export const quadTreeLogger     = new Logger(false); 
-export const articlesLogger     = new Logger(false); 
+export const articlesLogger     = new Logger(true); 
 

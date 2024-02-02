@@ -9,7 +9,7 @@ import { articleCache, fetchArticlesInBatches, eventEmitter } from './articles.j
 import { serverLogger as logger } from '../logger.js';
 import { fetchFeeds, fetchStories } from './serverFeedFetcher.js';
 import { generateColors } from '../utils/colorUtils.js';
-
+import { resetSimilarity } from '../Simil/simil.js';
 
 dotenv.config();
 
@@ -27,30 +27,51 @@ class Server {
     this.setupRoutes();
 
     this.currentRes = null;
+    this.eventQueue = [];
 
     this.selectedFeedIds = [];
-    this.feedId = '';
+    //this.feedId = '';
     this.eventEmitter = eventEmitter;
     this.onBatchArticles = this.onBatchArticles.bind(this);
+    this.processEventQueue = this.processEventQueue.bind(this);
+    this.handleFetchArticles = this.handleFetchArticles.bind(this);
+    this.isProcessing = false;
 
     this.initializeEventHandlers();
   }
 
   initializeEventHandlers() {
-    this.eventEmitter.on('articlesBatch', this.onBatchArticles);
+    this.eventEmitter.on('articlesBatch', this.processEventQueue);
   }
 
-  onBatchArticles(articlesWithContent) {
+  processEventQueue(articlesWithContent) {
+    this.eventQueue.push(articlesWithContent);
+
+    if (this.isProcessing) return;
+
+    this.isProcessing = true;
+
+    while (this.eventQueue.length > 0) {
+      const eventData = this.eventQueue.shift();
+      this.onBatchArticles(eventData);
+    }
+
+    this.isProcessing = false;
+
+  }
+
+  async onBatchArticles(articlesWithContent) {
+
+    if (this.currentRes) {
+      this.currentRes.write(`event: articlesBatch\ndata: ${JSON.stringify({ articles: articlesWithContent })}\n\n`);
+    }
+
     if (this.selectedFeedIds) {
       const selectedArticles = this.selectedFeedIds.flatMap(id => articleCache[id] || []);
       const wellFormedArticles = selectedArticles.filter(article => article && article.status === 'success');
       if (wellFormedArticles.length > 0) {
-        calculateAndSendSimilarityPairs(this.clients, wellFormedArticles);
+        await calculateAndSendSimilarityPairs(this.clients, wellFormedArticles);
       }
-    }
-
-    if (this.currentRes) {
-      this.currentRes.write(`event: articlesBatch\ndata: ${JSON.stringify({ articles: articlesWithContent })}\n\n`);
     }
 
   }
@@ -114,6 +135,9 @@ class Server {
   handleGetFeeds = async (/** @type {{ cookies: { [x: string]: any; }; }} */ req, /** @type {{ status: (arg0: number) => { (): any; new (): any; send: { (arg0: string): void; new (): any; }; }; }} */ res) => {
     const sessionCookie = req.cookies['sessionid'];
     try {
+      
+      resetSimilarity();  //MUST REMOVE WILL RESET SIMILARITY EACH TIME ANY CLIENT GRABS FEEDS
+      
       this.feeds = await fetchFeeds(sessionCookie);
       this.feeds = generateColors(this.feeds);
       const feedsWithUnreadStories = {};
@@ -144,7 +168,7 @@ class Server {
    * @param {string[]} req.body.selectedFeedIds - The selected feed IDs.
    * @param {Object} res - The response object.
    */
-  handleFetchArticles = async (req, res) => {
+  handleFetchArticles = (req, res) => {
     const { feedId, selectedFeedIds } = req.body;
     if (!feedId || (!Array.isArray(selectedFeedIds) && typeof selectedFeedIds !== 'string')) {
       return res.status(400).json({ error: 'Feed ID and selected feed IDs are required' });
@@ -153,13 +177,13 @@ class Server {
     try {
       // Update the class variables
       this.selectedFeedIds = selectedFeedIds;
-      this.feedId = feedId;
 
       // Acknowledge that the batch fetching process has started
       res.status(202).json({ message: 'Batch fetching started' });
 
+      const color = this.feeds[feedId].color;
       // Fetch articles in batches
-      await fetchArticlesInBatches(feedId, this.feeds[feedId].color, 5);
+      if (color) fetchArticlesInBatches(feedId, color, 5);
     } catch (error) {
       logger.error('Error fetching articles:', error);
       res.status(500).json({ error: 'Internal server error' });

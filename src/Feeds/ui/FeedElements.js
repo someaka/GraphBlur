@@ -22,7 +22,7 @@ function createFeedElement(feedData) {
         // Create a span for the article count
         const articleCountSpan = document.createElement('span');
         articleCountSpan.className = 'article-count';
-        articleCountSpan.textContent = `(${feedData.nt})`;
+        articleCountSpan.textContent = `${feedData.nt}`;
 
 
         // Append the feed title and article count spans to the feed element

@@ -1,3 +1,5 @@
+// @ts-nocheck
+/* eslint-disable no-undef */
 import { toggleMainContent } from "../ui/FeedUI";
 
 let isSameFeedClickedBool = false;

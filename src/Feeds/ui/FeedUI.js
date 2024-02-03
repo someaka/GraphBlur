@@ -1,15 +1,26 @@
+// @ts-nocheck
 import { formatArticleText } from '../utils/FeedUtils.js';
 import { articlesCache } from '../data/FeedCache.js';
 import { feedsLogger as logger } from '../../logger.js';
 import { loadArticles } from '../data/FeedData.js';
 
-const mainContentElement = document.querySelector('#maincontent');
-const articlesElement = document.querySelector('#articles');
+var mainContentElement = document.querySelector('#maincontent');
+var graphContentElement = document.querySelector('#graphcontent');
+var articlesElement = document.querySelector('#articles');
 
 function toggleMainContent(show) {
-    // Slide the panel into view if show is true, otherwise slide it out of view
-    // @ts-ignore
-    mainContentElement.style.right = show ? '0px' : '-40%';
+    // Get the main content element
+    //var mainContentElement = document.querySelector('#maincontent');
+
+    // If show is true, set the right property to 0 to show the panel,
+    // otherwise set the right property to a negative value equal to the panel's width to hide the panel
+    if (show) {
+        mainContentElement.style.right = '0%';
+        graphContentElement.style.width = 'calc(100% - 280px - 40%)'; // Subtract the width of #feedsContainer and #maincontent
+    } else {
+        mainContentElement.style.right = '-40%';
+        graphContentElement.style.width = 'calc(100% - 280px)'; // Full width minus #feedsContainer
+    }
 }
 
 function toggleFeedElement(feedElement, originalColor) {

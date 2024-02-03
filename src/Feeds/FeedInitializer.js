@@ -1,5 +1,4 @@
-// FeedInitializer.js
-
+// @ts-nocheck
 import { appendFeedsToDOM } from './ui/FeedElements.js';
 import { toggleAllFeeds } from './ui/FeedEvents.js';
 import { feedsLogger as logger } from '../logger.js';

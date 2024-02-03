@@ -38,7 +38,9 @@ class SigmaGrapUpdate {
 
             renderLabels: true, // Disable automatic label rendering   
             allowInvalidContainer: true, //shusshes cypress
-            labelRenderedSizeThreshold: 5,
+            labelDensity: 0.5,
+            labelGridCellSize: 200,
+            // labelRenderedSizeThreshold: 5, // affects label for node size
             // nodeProgramClasses: {
             //     border: NodeProgramBorder,
             // },

@@ -38,8 +38,8 @@ class SigmaGrapUpdate {
 
             renderLabels: true, // Disable automatic label rendering   
             allowInvalidContainer: true, //shusshes cypress
-            labelDensity: 0.5,
-            labelGridCellSize: 200,
+            labelDensity: 1,
+            labelGridCellSize: 150,
             // labelRenderedSizeThreshold: 5, // affects label for node size
             // nodeProgramClasses: {
             //     border: NodeProgramBorder,
@@ -488,7 +488,7 @@ class SigmaGrapUpdate {
                 color: '#000000'
             });
             this.renderer.setSetting("defaultDrawNodeHover",
-                this.defaultDrawHover
+                this.defaultDrawHover || (() => {})
             );
             this.graph.forEachEdge((edge) => {
                 this.graph.updateEdgeAttributes(edge, attr => {

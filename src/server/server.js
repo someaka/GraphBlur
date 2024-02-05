@@ -34,7 +34,6 @@ class Server {
     this.eventEmitter = eventEmitter;
     this.onBatchArticles = this.onBatchArticles.bind(this);
     this.processEventQueue = this.processEventQueue.bind(this);
-    this.handleFetchArticles = this.handleFetchArticles.bind(this);
     this.isProcessing = false;
 
     this.initializeEventHandlers();
@@ -60,17 +59,23 @@ class Server {
 
   }
 
-  async onBatchArticles(articlesWithContent) {
+  onBatchArticles(articlesWithContent) {
 
     if (this.currentRes) {
-      this.currentRes.write(`event: articlesBatch\ndata: ${JSON.stringify({ articles: articlesWithContent })}\n\n`);
+      const jsonArticles = JSON.stringify({ articles: articlesWithContent });
+      const batchMessage = `event: articlesBatch\ndata: ${jsonArticles}\n\n`;
+      this.currentRes.write(batchMessage);
+
+      // this.currentRes.write(`event: articlesBatch\ndata: ${JSON.stringify({ articles: articlesWithContent })}\n\n`);
     }
 
     if (this.selectedFeedIds) {
-      const selectedArticles = this.selectedFeedIds.flatMap(id => articleCache[id] || []);
-      const wellFormedArticles = selectedArticles.filter(article => article && article.status === 'success');
+      const selectedArticles = this.selectedFeedIds.flatMap(id =>
+        articleCache[id] || []);
+      const wellFormedArticles = selectedArticles.filter(article =>
+        article && article.status === 'success');
       if (wellFormedArticles.length > 0) {
-        await calculateAndSendSimilarityPairs(this.clients, wellFormedArticles);
+        calculateAndSendSimilarityPairs(this.clients, wellFormedArticles);
       }
     }
 
@@ -104,10 +109,9 @@ class Server {
     }
   }
 
-  handleLogin = async (/** @type {{ body: { username: any; password?: "" | undefined; }; }} */ req, /** @type {{ status: (arg0: number) => { (): any; new (): any; json: { (arg0: { error?: any; authenticated?: boolean; }): void; new (): any; }; }; cookie: (arg0: string, arg1: string | undefined, arg2: { httpOnly: boolean; // The cookie is not accessible via JavaScript
-    secure: boolean; sameSite: string; maxAge: number; // The cookie will expire after 1 hour
-     }) => void; }} */ res) => {
-    const { username, password = '' } = req.body; // Default password to an empty string if not provided
+  handleLogin = async (req, res) => {
+    // Default password to an empty string if not provided
+    const { username, password = '' } = req.body;
     if (!username) {
       return res.status(400).json({ error: 'Username is required' });
     }
@@ -121,7 +125,7 @@ class Server {
           sameSite: "None",
           maxAge: 3600000 // The cookie will expire after 1 hour
         });
-        // The server no longer saves the session cookie, so we just return it to the client
+
         res.status(200).json({ authenticated: true });
       } else {
         res.status(401).json({ authenticated: false, error: loginResult.error });
@@ -135,9 +139,9 @@ class Server {
   handleGetFeeds = async (/** @type {{ cookies: { [x: string]: any; }; }} */ req, /** @type {{ status: (arg0: number) => { (): any; new (): any; send: { (arg0: string): void; new (): any; }; }; }} */ res) => {
     const sessionCookie = req.cookies['sessionid'];
     try {
-      
+
       resetSimilarity();  //MUST REMOVE WILL RESET SIMILARITY EACH TIME ANY CLIENT GRABS FEEDS
-      
+
       this.feeds = await fetchFeeds(sessionCookie);
       this.feeds = generateColors(this.feeds);
       const feedsWithUnreadStories = {};

@@ -14,7 +14,7 @@ class Articles {
     static instance = null;
     articleCache = {};
     userAgent = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
-    eventEmitter = new EventEmitter().setMaxListeners(200);
+    eventEmitter = new EventEmitter();
     processingQueue = false;
     requestQueue = [];
 
@@ -115,36 +115,36 @@ class Articles {
         return clean; // Return the cleaned content
     }
 
-    /**
-     * @param {string | string[]} feedIds
-     */
-    async fetchArticlesWithContentForFeeds(feedIds) {
-        // If a single feedId is provided, convert it to an array
-        if (!Array.isArray(feedIds)) {
-            feedIds = [feedIds];
-        }
+    // /**
+    //  * @param {string | string[]} feedIds
+    //  */
+    // async fetchArticlesWithContentForFeeds(feedIds) {
+    //     // If a single feedId is provided, convert it to an array
+    //     if (!Array.isArray(feedIds)) {
+    //         feedIds = [feedIds];
+    //     }
 
-        const allArticlesWithContent = [];
+    //     const allArticlesWithContent = [];
 
-        for (const feedId of feedIds) {
-            const unreadStories = this.articleCache[feedId] || [];
-            const validUrls = unreadStories.filter((/** @type {{ story_permalink: string; }} */ story) => typeof story.story_permalink === 'string' && story.story_permalink.startsWith('http'));
+    //     for (const feedId of feedIds) {
+    //         const unreadStories = this.articleCache[feedId] || [];
+    //         const validUrls = unreadStories.filter((/** @type {{ story_permalink: string; }} */ story) => typeof story.story_permalink === 'string' && story.story_permalink.startsWith('http'));
 
-            // Fetch content for each valid URL and assign a UUID
-            const articlesWithContent = await Promise.all(validUrls.map(async (/** @type {{ story_permalink: any; }} */ story) => {
-                const articleContent = await this.fetchArticle(story.story_permalink);
-                return {
-                    ...articleContent,
-                    id: uuidv4(), // Generate a UUID as the ID
-                    feedId: feedId // Include the feedId for later reference
-                };
-            }));
+    //         // Fetch content for each valid URL and assign a UUID
+    //         const articlesWithContent = await Promise.all(validUrls.map(async (/** @type {{ story_permalink: any; }} */ story) => {
+    //             const articleContent = await this.fetchArticle(story.story_permalink);
+    //             return {
+    //                 ...articleContent,
+    //                 id: uuidv4(), // Generate a UUID as the ID
+    //                 feedId: feedId // Include the feedId for later reference
+    //             };
+    //         }));
 
-            allArticlesWithContent.push(...articlesWithContent);
-        }
+    //         allArticlesWithContent.push(...articlesWithContent);
+    //     }
 
-        return allArticlesWithContent;
-    }
+    //     return allArticlesWithContent;
+    // }
 
 
 
@@ -242,13 +242,13 @@ const eventEmitter = Articles.getInstance().eventEmitter;
 const fetchArticle = url =>
     Articles.getInstance().fetchArticle(url);
 
-/**
- * Fetches articles with content for given feed IDs.
- * @param {string | string[]} feedIds An array of feed IDs to fetch articles for.
- * @returns An array of articles with fetched content.
- */
-const fetchArticlesWithContentForFeeds = feedIds =>
-    Articles.getInstance().fetchArticlesWithContentForFeeds(feedIds);
+// /**
+//  * Fetches articles with content for given feed IDs.
+//  * @param {string | string[]} feedIds An array of feed IDs to fetch articles for.
+//  * @returns An array of articles with fetched content.
+//  */
+// const fetchArticlesWithContentForFeeds = feedIds =>
+//     Articles.getInstance().fetchArticlesWithContentForFeeds(feedIds);
 
 /**
  * Fetches articles in batches for a specific feed, with color and optional batch size.
@@ -265,6 +265,6 @@ export {
     articleCache,
     eventEmitter,
     fetchArticle,
-    fetchArticlesWithContentForFeeds,
+    // fetchArticlesWithContentForFeeds,
     fetchArticlesInBatches
 };

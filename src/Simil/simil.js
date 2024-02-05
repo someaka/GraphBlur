@@ -1,8 +1,6 @@
+import { cpus } from 'os';
 import { getEmbeddings } from './similarityInteraction.js';
 import { createWorkerPool } from '../utils/workerSupport.js';
-import { cpus } from 'os';
-import { reversePairKey } from '../utils/graphHelpers.js';
-import { isValidArticle } from '../utils/articlesCheck.js';
 
 
 
@@ -17,7 +15,7 @@ class Similarity {
     static instance = null;
 
     /**
-     * @type {Map<string, number[]>}
+     * @type {Record<string, number>}
      */
     similarityPairs;
 
@@ -68,14 +66,13 @@ class Similarity {
 
     initialize() {
         this.embeddingsCache = {};
-        this.similarityPairs = new Map();
+        this.similarityPairs = {};
         this.pairsSet = new Set();
         this.numCPUs = Math.max(1, cpus().length / 2 - 1);
         this.workerPool = createWorkerPool(this.numCPUs);
         this.queuedArticles = [];
         this.lastEmbeddingsCallTime = 0;
         this.isProcessing = false;
-        this.checkArticle = this.checkArticle.bind(this);
 
     }
 
@@ -101,45 +98,11 @@ class Similarity {
 
 
 
-
-
-    // validateArticles(articles) {
-    //     let validArticles = [];
-    //     articles.forEach(article => {
-    //         if (!this.embeddingsCache[article.id]) {
-    //             const hasInvalidContent = !article.article || typeof article.article.title !== 'string' || typeof article.article.text !== 'string';
-    //             const isEmptyString = !`${article.article.title} ${article.article.text}`.trim();
-
-    //             if (!hasInvalidContent && !isEmptyString) {
-    //                 validArticles.push(article);
-    //             } else {
-    //                 //this.assignZeroSimilarity(article, articles);
-    //             }
-    //         }
-    //     });
-    //     return validArticles;
-    // }
-
-    // assignZeroSimilarity(article, articles) {
-    //     articles.forEach((otherArticle) => {
-    //         if (otherArticle !== article) {
-    //             this.embeddingsCache[article.id] = new Array(384).fill(0);
-    //             this.similarityPairs.set(`${article.id}_${otherArticle.id}`, -2);
-    //             //this.similarityPairs.set(`${otherArticle.id}_${article.id}`, -2);
-    //             this.pairsSet.add(`${article.id}_${otherArticle.id}`);
-    //             this.pairsSet.add(`${otherArticle.id}_${article.id}`);
-    //         }
-    //     });
-    // }
-
-
-
-
-
-
     async fetchEmbedings(articles) {
-        // Check which articles we already have in cache
-        const articlesToFetch = this.validateArticles(articles);
+        // Check which articles we don't have in embeddings cache
+        const articlesToFetch = articles.filter((article) =>
+            this.embeddingsCache[article.id] === undefined);
+
 
         if (articlesToFetch.length > 0) {
             this.queuedArticles = this.queuedArticles.concat(articlesToFetch);
@@ -149,18 +112,13 @@ class Similarity {
 
     }
 
-    validateArticles(articles) {
-        return articles.filter(this.checkArticle);
-    }
 
-    checkArticle(article) {
-        return (this.embeddingsCache[article.id] === undefined) && isValidArticle(article)
-    }
 
     async waitForEmbeddings() {
-        const currentTime = Date.now();
 
+        const currentTime = Date.now();
         const elapsedTime = currentTime - this.lastEmbeddingsCallTime;
+
         if (elapsedTime < EMBEDDINGS_CALL_INTERVAL) {
             setTimeout(() => { }, EMBEDDINGS_CALL_INTERVAL - elapsedTime);
         }
@@ -183,12 +141,13 @@ class Similarity {
             // Remove duplicates in queuedArticles
             this.queuedArticles = Array.from(new Set(this.queuedArticles));
             const articlesWithIds = this.extractTextsFromArticles(this.queuedArticles);
+            this.queuedArticles = [];
+
             const embeddingsResults = await getEmbeddings(articlesWithIds);
             embeddingsResults.forEach(result => {
                 this.embeddingsCache[result.id] = result.embedding;
             });
 
-            this.queuedArticles = [];
             this.lastEmbeddingsCallTime = currentTime;
 
             this.isProcessing = false;
@@ -197,7 +156,7 @@ class Similarity {
     }
 
     extractTextsFromArticles(articles) {
-        return articles.map((/** @type {{ id: any; article: { title: any; text: any; }; }} */ article) =>
+        return articles.map((/** @type {{ id: string; article: { title: string; text: string; }; }} */ article) =>
             ({ id: article.id, text: `${article.article.title} ${article.article.text}`.replace(/<[^>]*>/g, '') }));
     }
 
@@ -213,28 +172,12 @@ class Similarity {
         // Keep track of articles that need their embeddings updated
         const articlesToUpdate = new Set();
 
-
         // Enqueue tasks for processing
         for (const task of tasks) {
-            if (task.updateEmbeddings) {
-                switch (task.updateEmbeddings) {
-                    case 0:
-                        articlesToUpdate.add(task.id1);
-                        break;
-                    case 1:
-                        articlesToUpdate.add(task.id2);
-                        break;
-                    case 2:
-                        articlesToUpdate.add(task.id1);
-                        articlesToUpdate.add(task.id2);
-                        break;
-                    default:
-                        throw new Error(`Invalid updateEmbeddings value: ${task.updateEmbeddings}`);
-                }
-
-            } else {
-                validTasks.push(task);
-            }
+            const { id1, id2, em1, em2 } = task;
+            if (!em1) articlesToUpdate.add(id1);
+            if (!em2) articlesToUpdate.add(id2);
+            if (em1 && em2) validTasks.push(task);
         }
 
         const missingArticles = articles.filter(article => articlesToUpdate.has(article.id));
@@ -255,27 +198,15 @@ class Similarity {
             for (let j = i + 1; j < articles.length; j++) {
                 const id1 = articles[i].id;
                 const id2 = articles[j].id;
+                const em1 = this.embeddingsCache[id1];
+                const em2 = this.embeddingsCache[id2];
+
                 // Skip if similarity score already calculated
                 if (this.pairsSet.has(`${id1}_${id2}`) ||
                     this.pairsSet.has(`${id2}_${id1}`)
                 ) continue;
-                // Check if embeddings are cached for both ids
-                if (!this.embeddingsCache[id1]) {
-                    if (!this.embeddingsCache[id2]) {
-                        // both missing
-                        yield { id1, id2, updateEmbeddings: 2 };
-                    } else {
-                        // id1 missing
-                        yield { id1, id2, updateEmbeddings: 0 };
-                    }
-                } else {
-                    if (!this.embeddingsCache[id2]) {
-                        // id2 missing
-                        yield { id1, id2, updateEmbeddings: 1 };
-                    } else {
-                        yield { id1, id2 };
-                    }
-                }
+
+                yield { id1, id2, em1, em2 };
 
             }
         }
@@ -294,8 +225,8 @@ class Similarity {
                     workers.forEach(worker => worker.busy = true);
 
                 } else {
-
-                    workers = await this.waitForWorkers();
+                    const availableWorker = await this.waitForWorkers();
+                    workers = [availableWorker];
                 }
 
                 // Pop as much tasks as we have workers available
@@ -307,7 +238,11 @@ class Similarity {
                 for (const worker of workers) {
                     const workerTask = poppedTasks.shift();
                     // Process the task using the worker
-                    await this.processTask(worker.worker, workerTask);
+                    const res = await this.processTask(worker.worker, workerTask);
+                    if (res) {
+                        const { pairKey, similarity } = res;
+                        this.similarityPairs[pairKey] = similarity;
+                    }
                 }
 
             }
@@ -324,7 +259,7 @@ class Similarity {
                 if (!worker.busy) {
                     this.workerPool.removeListener('workerAvailable', grabWorker);
                     worker.busy = true;
-                    resolve([worker]);
+                    resolve(worker);
                 }
             }
             this.workerPool.on('workerAvailable', grabWorker);
@@ -337,36 +272,38 @@ class Similarity {
         return new Promise((/** @type {(value?: any) => void} */resolve, reject) => {
 
             const pairKey = `${task.id1}_${task.id2}`;
-            const reversedKey = reversePairKey(pairKey);
+            const reveKey = `${task.id2}_${task.id1}`;
+            const cleanUp = () => {
+                worker.removeListener('message', handleMessage);
+                worker.removeListener('error', handleError);
+            }
 
-            const handleMessage = (/** @type {{ error: string | undefined; similarity: any; }} */ message) => {
+            const handleMessage = (message) => {
+                cleanUp();
                 if (message.error) {
                     reject(new Error(message.error));
                 } else {
-                    this.similarityPairs.set(pairKey, message.similarity);
-                    //this.similarityPairs.set(reversedKey, message.similarity);
+                    // this.similarityPairs.set(pairKey, message.similarity);
                     this.pairsSet.add(pairKey);
-                    this.pairsSet.add(reversedKey);
-                    resolve();
+                    this.pairsSet.add(reveKey);
+                    resolve({ pairKey: pairKey, similarity: message.similarity });
                 }
             };
 
-            const handleError = (/** @type {any} */ error) => {
+            const handleError = (error) => {
+                cleanUp();
                 reject(new Error(`Error processing task ${pairKey}: ${error}`));
             };
 
-            worker.once('message', handleMessage);
-            worker.once('error', handleError);
+            worker.on('message', handleMessage);
+            worker.on('error', handleError);
             worker.postMessage({
-                vector1: this.embeddingsCache[task.id1],
-                vector2: this.embeddingsCache[task.id2],
+                vector1: task.em1,
+                vector2: task.em2,
                 indexI: task.id1,
                 indexJ: task.id2
 
             });
-        }).finally(() => {
-            // Ensure the worker is always marked as available, even if an error occurs
-            // worker.busy = false;
         }).catch(error => {
             console.error(`Failed to process task: ${error}`);
         });

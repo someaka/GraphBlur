@@ -294,8 +294,8 @@ class Similarity {
                     workers.forEach(worker => worker.busy = true);
 
                 } else {
-
-                    workers = await this.waitForWorkers();
+                    const availableWorker = await this.waitForWorker();
+                    workers = [availableWorker];
                 }
 
                 // Pop as much tasks as we have workers available
@@ -317,7 +317,7 @@ class Similarity {
 
     }
 
-    async waitForWorkers() {
+    async waitForWorker() {
         return new Promise((resolve) => {
             // Wait for a worker to become available
             const grabWorker = (worker) => {

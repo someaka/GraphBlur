@@ -128,7 +128,7 @@ class Graph {
     /**
      * @param {Map<string, number> | null} newSimilarityPairs
      */
-    async updateGraphForSelectedFeeds(newSimilarityPairs = null) {
+    async updateGraphForSelectedFeeds(newSimilarityPairs = null, emptyArticles = false) {
         // Update the existingEdgesSet
         if (newSimilarityPairs) {
             for (let [edge, score] of newSimilarityPairs.entries()) {
@@ -158,9 +158,14 @@ class Graph {
 
         selectedFeedsElements.forEach(feedElement => {
             const { id: feedId } = feedElement;
-            const feedArticles = articlesCache[feedId];
-
+            let feedArticles = articlesCache[feedId];
+        
             if (feedArticles) {
+                // Filter out articles with empty strings if emptyArticles is false
+                if (!emptyArticles) {
+                    feedArticles = feedArticles.filter(article => article.id && article.article?.title && article.article?.text);
+                }
+        
                 const newNodes = this.articlesToNodes(
                     feedArticles.map((article) => ({
                         id: article.id || '',
@@ -168,8 +173,8 @@ class Graph {
                         feedColor: article.feedColor || '',
                         content: article.article?.text || ''
                     }))
-                )
-
+                );
+        
                 nodes = nodes.concat(newNodes);
             }
         });

@@ -16,7 +16,10 @@ class Articles {
     userAgent = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
     eventEmitter = new EventEmitter().setMaxListeners(200);
     processingQueue = false;
-    requestQueue = [];
+    /**
+     * @type {any | null}
+     */
+    requestQueue = null;
 
     static getInstance() {
         if (!this.instance) {
@@ -56,53 +59,27 @@ class Articles {
      * @param {string} url
      */
     async processArticle(htmlData, url) {
-        try {
-            // Log the URL being processed for reference
-            //logger.log(`Processing article from URL: ${url}`);
-
-            // Use the extract function from @extractus/article-extractor
-            const article = await extract(htmlData, {
-                // You can pass additional options if needed
-            });
-
-            if (article && article.content) {
-                // Clean the content
-                const cleanedContent = this.cleanArticleContent(article.content);
-
-                // Log the extracted article title for reference
-                //logger.log(`Extracted article title: ${article.title}`);
-                return {
-                    title: article.title,
-                    text: cleanedContent, // Use the cleaned content
-                    url: article.url
-                };
-            } else {
-                logger.error('Failed to extract article content. No article data returned.');
-                // Return an object with empty strings for title and text
-                return {
-                    title: '',
-                    text: '',
-                    url: url // Keep the original URL
-                };
-            }
-        } catch (error) {
+        let article = null;
+        try { article = await extract(htmlData); }
+        catch (error) {
             logger.error('An error occurred while extracting the article:', error);
-            // Return an object with empty strings for title and text
-            return {
-                title: '',
-                text: '',
-                url: url // Keep the original URL
-            };
         }
+        const processedArticle = {
+            title: article?.title || '',
+            text: this.cleanArticleContent(article?.content) || '',
+            url: url
+        };
+        article = null;
+        return processedArticle;
+
     }
 
 
     /**
-     * @param {string} content
+     * @param {string | undefined} content
      */
     cleanArticleContent(content) {
-        // Define the allowed tags and attributes
-        const clean = sanitizeHtml(content, {
+        if (content) return sanitizeHtml(content, {
             allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2']),
             allowedAttributes: {
                 ...sanitizeHtml.defaults.allowedAttributes,
@@ -112,14 +89,12 @@ class Articles {
             allowedStyles: {}
         });
 
-        return clean; // Return the cleaned content
     }
 
     /**
      * @param {string | string[]} feedIds
      */
     async fetchArticlesWithContentForFeeds(feedIds) {
-        // If a single feedId is provided, convert it to an array
         if (!Array.isArray(feedIds)) {
             feedIds = [feedIds];
         }
@@ -127,18 +102,22 @@ class Articles {
         const allArticlesWithContent = [];
 
         for (const feedId of feedIds) {
-            const unreadStories = this.articleCache[feedId] || [];
-            const validUrls = unreadStories.filter((/** @type {{ story_permalink: string; }} */ story) => typeof story.story_permalink === 'string' && story.story_permalink.startsWith('http'));
+            const validUrls = this.articleCache[feedId]
+                .filter((/** @type {{ story_permalink: string; }} */ story) =>
+                    typeof story.story_permalink === 'string' &&
+                    story.story_permalink.startsWith('http'));
 
-            // Fetch content for each valid URL and assign a UUID
-            const articlesWithContent = await Promise.all(validUrls.map(async (/** @type {{ story_permalink: any; }} */ story) => {
-                const articleContent = await this.fetchArticle(story.story_permalink);
-                return {
-                    ...articleContent,
-                    id: uuidv4(), // Generate a UUID as the ID
-                    feedId: feedId // Include the feedId for later reference
-                };
-            }));
+            const articlesWithContent =
+                await Promise.all(
+                    validUrls.map(async (/** @type {{ story_permalink: any; }} */ story) => {
+                        const articleContent = await this.fetchArticle(story.story_permalink);
+                        return {
+                            ...articleContent,
+                            id: uuidv4(),
+                            feedId: feedId
+                        };
+                    })
+                );
 
             allArticlesWithContent.push(...articlesWithContent);
         }
@@ -181,6 +160,9 @@ class Articles {
      * @param {string} feedColor
      */
     async fetchArticlesInBatches(feedId, feedColor, batchSize = 5) {
+        if (!this.requestQueue) {
+            this.requestQueue = [];
+        }
         this.requestQueue.push({ feedId, feedColor, batchSize });
 
         if (this.processingQueue) {
@@ -190,38 +172,29 @@ class Articles {
         this.processingQueue = true;
 
         while (this.requestQueue.length > 0) {
-            const nextRequest = this.requestQueue.shift();
-            await this.processNextRequest(nextRequest);
+            await this.processNextRequest(this.requestQueue.shift());
         }
-
+        this.requestQueue = null;
         this.processingQueue = false;
     }
 
     async processNextRequest(request) {
         const { feedId, feedColor, batchSize } = request;
 
-        const allArticlesWithContent = [];
-
-        const unreadStories = this.articleCache[feedId] || [];
-        const validUrls = unreadStories.filter((/** @type {{ story_permalink: string; }} */ story) =>
-            typeof story.story_permalink === 'string' && story.story_permalink.startsWith('http'));
+        let validUrls = this.articleCache[feedId]
+            .filter((/** @type {{ story_permalink: string; }} */ story) =>
+                typeof story.story_permalink === 'string' && story.story_permalink.startsWith('http'));
 
         while (validUrls.length > 0) {
             const batch = validUrls.splice(0, batchSize);
-            const promises = batch.map((/** @type {any} */ story) =>
-                this.fetchArticleWithRetry(story, feedId, feedColor));
-
-            const articlesWithContent = await Promise.all(promises);
-
-            allArticlesWithContent.push(...articlesWithContent);
-
-            this.articleCache[feedId] = allArticlesWithContent;
-
+            const articlesWithContent = await Promise.all(batch.map((/** @type {any} */ story) =>
+                this.fetchArticleWithRetry(story, feedId, feedColor)));
+            this.articleCache[feedId].push(...articlesWithContent);
             this.eventEmitter.emit('articlesBatch', articlesWithContent);
-
             validUrls.unshift(...articlesWithContent.filter(article => article.title === '' && article.text === ''));
         }
 
+        validUrls = null;
         this.eventEmitter.emit('jobComplete');
     }
 
